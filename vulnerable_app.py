@@ -43,6 +43,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
+        # AÇIK #6: ?next= doğrulanmadan yönlendirmeye konuyor (open redirect)
+        params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        nxt = params.get("next", [None])[0]
+        if nxt:
+            self.send_response(302)
+            self.send_header("Location", nxt)
+            self.end_headers()
+            return
         self._send(200, LOGIN_FORM)
 
     def do_POST(self):

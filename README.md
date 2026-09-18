@@ -83,14 +83,14 @@ print(report.to_json())
 | `ratelimit` | Whether repeated failed logins get blocked |
 | `cookies` | Session cookie HttpOnly / Secure / SameSite flags |
 | `session` | Predictable session tokens (short / numeric / sequential / low-entropy) |
+| `csrf` | CSRF token / cookie / SameSite defense on the login page |
+| `open_redirect` | Unvalidated redirect via `?next=`, `?returnUrl=`, etc. |
+| `jwt` | Passive JWT weaknesses (`alg=none`, missing `exp`) |
 | `headers` | HTTPS, HSTS, nosniff, clickjacking, Referrer-Policy, version disclosure |
 
 ## Roadmap (checks to add next, in order)
 
-- [ ] `csrf` — login form / endpoint CSRF token presence and enforcement
-- [ ] `open_redirect` — unvalidated post-login redirect (`?next=`, `?returnUrl=`)
 - [ ] `verb` — HTTP method handling / verb tampering
-- [ ] `jwt` — passive JWT weaknesses (`alg=none`, missing `exp`)
 - [ ] `cors` — permissive CORS on the auth endpoint (`ACAO: *` with credentials)
 - [ ] `cache` — sensitive responses missing `Cache-Control: no-store`
 

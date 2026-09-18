@@ -22,6 +22,12 @@ class RequestBudgetExceeded(Exception):
     pass
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    # A scanner must see 3xx responses, not silently follow them.
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 @dataclass
 class Response:
     status: int
@@ -46,6 +52,8 @@ class HttpClient:
         if not verify_tls:
             self._ctx.check_hostname = False
             self._ctx.verify_mode = ssl.CERT_NONE
+        self._opener = urllib.request.build_opener(
+            _NoRedirect, urllib.request.HTTPSHandler(context=self._ctx))
 
     @property
     def remaining(self) -> int:
@@ -82,7 +90,7 @@ class HttpClient:
                                      headers=req_headers)
         start = time.time()
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as resp:
+            with self._opener.open(req, timeout=self.timeout) as resp:
                 return self._to_response(resp, start, url)
         except urllib.error.HTTPError as e:
             return self._to_response(e, start, url)

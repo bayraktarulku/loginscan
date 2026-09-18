@@ -4,6 +4,9 @@ import json
 import pytest
 
 from loginscan.authorization import NotAuthorized, ensure_authorized
+import base64
+
+from loginscan.checks import jwt as jwt_check
 from loginscan.checks import session as session_check
 from loginscan.discovery import DiscoveryError, from_site, from_swagger
 from loginscan.http import HttpClient, Response
@@ -61,6 +64,20 @@ def test_from_site_discovers_fields():
 def test_from_site_without_password_raises():
     with pytest.raises(DiscoveryError):
         from_site("http://site/page", FakeClient("<form></form>"))
+
+
+def _b64url(obj):
+    raw = json.dumps(obj).encode()
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+
+def test_jwt_alg_none_is_vulnerable():
+    token = f"{_b64url({'alg': 'none'})}.{_b64url({'sub': 'admin'})}."
+    client = HttpClient(10, 0, 5, True)
+    client.observed_session_tokens = [("token", token)]
+    findings = jwt_check.run(client, ScanConfig(url="http://x/"))
+    assert any(f.status == Status.VULNERABLE for f in findings)
+    assert any("exp" in f.title for f in findings)
 
 
 def test_from_swagger_v3(tmp_path):

@@ -24,6 +24,11 @@ def test_secure_server_passes_core_checks(secure_url):
     assert "ratelimit" not in vuln
 
 
+def test_vulnerable_server_open_redirect(vuln_url):
+    report = _scan(vuln_url, known_username="admin")
+    assert "open_redirect" in {f.check for f in report.vulnerabilities}
+
+
 def test_secure_server_has_csrf_defense(secure_url):
     report = _scan(secure_url, known_username="admin")
     csrf = [f for f in report.findings if f.check == "csrf"]
