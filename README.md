@@ -109,6 +109,16 @@ loginscan --site http://127.0.0.1:8002/ --i-own-this --user admin --success "Gir
 #   -> sqli / enumeration / rate-limit all OK
 ```
 
+## Releasing to PyPI
+
+The package builds cleanly (`python -m build`) and passes `twine check`. To publish:
+
+1. Create the `loginscan` project on PyPI and add a Trusted Publisher for this repo's
+   `Publish to PyPI` workflow (environment `pypi`).
+2. Push a version tag: `git tag v0.1.0 && git push origin v0.1.0`.
+
+The workflow then builds and uploads automatically — no API token stored in the repo.
+
 ## License
 
 MIT. Authorized use only.
