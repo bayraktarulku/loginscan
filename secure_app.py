@@ -78,7 +78,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        self._send(200, LOGIN_FORM)
+        # DEFENSE #6: per-request CSRF token, double-submit (cookie + hidden field).
+        token = secrets.token_urlsafe(16)
+        self.send_response(200)
+        self.send_header("Set-Cookie", f"csrf={token}; SameSite=Strict; Path=/")
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(LOGIN_FORM.format(csrf=token).encode())
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -88,6 +94,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         password = data.get("password", [""])[0]
         ip = self.client_address[0]
         key = (ip, username)
+
+        # DEFENSE #6: if a browser sends the csrf cookie, the form token must match.
+        cookie_csrf = self._cookie("csrf")
+        if cookie_csrf and cookie_csrf != data.get("csrf", [""])[0]:
+            self._send(403, "<h2>CSRF validation failed</h2>")
+            return
 
         # SAVUNMA #4: çok deneme → engelle
         if rate_limited(key):
@@ -124,6 +136,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             # SAVUNMA #3: her durumda AYNI genel mesaj
             self._send(401, "<h2>Giriş başarısız</h2><p>Kullanıcı adı veya şifre hatalı.</p>")
 
+    def _cookie(self, name):
+        raw = self.headers.get("Cookie", "")
+        for part in raw.split(";"):
+            if "=" in part:
+                k, v = part.strip().split("=", 1)
+                if k == name:
+                    return v
+        return None
+
     def _send(self, code, html):
         self.send_response(code)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -134,6 +155,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 LOGIN_FORM = """
 <h1>GÜVENLİ Login (öğrenme demosu)</h1>
 <form method="POST" action="/">
+  <input type="hidden" name="csrf" value="{csrf}">
   Kullanıcı: <input name="username"><br>
   Şifre:     <input name="password" type="password"><br>
   <button>Giriş</button>
