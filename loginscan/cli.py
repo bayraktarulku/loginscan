@@ -46,6 +46,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--insecure", action="store_true", help="Disable TLS certificate verification.")
     p.add_argument("--json", dest="json_path", default=None, metavar="FILE",
                    help="Also write the report as JSON to this file.")
+    p.add_argument("--html", dest="html_path", default=None, metavar="FILE",
+                   help="Also write the report as a shareable HTML page.")
     p.add_argument("--version", action="version", version=f"loginscan {__version__}")
     return p
 
@@ -117,6 +119,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         with open(args.json_path, "w", encoding="utf-8") as fh:
             fh.write(report.to_json())
         print(f"\nJSON report written: {args.json_path}")
+    if args.html_path:
+        with open(args.html_path, "w", encoding="utf-8") as fh:
+            fh.write(report.to_html())
+        print(f"HTML report written: {args.html_path}")
 
     return 1 if any(f.status == Status.VULNERABLE for f in report.findings) else 0
 

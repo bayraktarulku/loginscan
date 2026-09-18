@@ -58,6 +58,7 @@ Useful options:
 | `--field csrf=abc` | Constant field added to every request. |
 | `--max-requests 25` | Total request budget. |
 | `--json report.json` | Also write the report as JSON. |
+| `--html report.html` | Also write a shareable, styled HTML report. |
 | `--insecure` | Disable TLS verification (for your own test server). |
 
 Exit code: `1` if any vulnerability is found, `0` if clean, `2` if unauthorized/misused (handy for CI).

@@ -51,6 +51,15 @@ def test_report_tracks_vulnerabilities():
     assert json.loads(rep.to_json())["summary"]["vulnerable"] == 1
 
 
+def test_report_html_escapes_and_renders():
+    rep = Report("http://x/")
+    rep.add(Finding("a", Status.VULNERABLE, Severity.HIGH, "<script>", "d & d"))
+    out = rep.to_html()
+    assert out.startswith("<!doctype html>")
+    assert "<script>" not in out  # escaped
+    assert "1 vulnerable" in out
+
+
 def test_from_site_discovers_fields():
     html = ('<form action="/login" method="post">'
             '<input name="email" type="text">'
