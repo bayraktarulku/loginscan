@@ -1,0 +1,83 @@
+"""Unit tests for pure logic (no network)."""
+import json
+
+import pytest
+
+from loginscan.authorization import NotAuthorized, ensure_authorized
+from loginscan.checks import session as session_check
+from loginscan.discovery import DiscoveryError, from_site, from_swagger
+from loginscan.http import HttpClient, Response
+from loginscan.models import Finding, ScanConfig, Severity, Status
+from loginscan.report import Report
+
+
+class FakeClient:
+    def __init__(self, body="", cookies=None):
+        self.body = body
+        self.cookies = cookies or []
+        self.observed_session_tokens = []
+
+    def get(self, url, headers=None):
+        return Response(200, {}, self.cookies, self.body, 0.0, url)
+
+
+def test_authorization_gate():
+    with pytest.raises(NotAuthorized):
+        ensure_authorized(False)
+    ensure_authorized(True)
+
+
+def test_session_sequential_is_vulnerable():
+    client = HttpClient(10, 0, 5, True)
+    client.observed_session_tokens = [("session", "1006"), ("session", "1007")]
+    findings = session_check.run(client, ScanConfig(url="http://x/"))
+    assert findings[0].status == Status.VULNERABLE
+
+
+def test_session_none_is_skipped():
+    client = HttpClient(10, 0, 5, True)
+    findings = session_check.run(client, ScanConfig(url="http://x/"))
+    assert findings[0].status == Status.SKIPPED
+
+
+def test_report_tracks_vulnerabilities():
+    rep = Report("t")
+    rep.add(Finding("a", Status.VULNERABLE, Severity.HIGH, "t", "d"))
+    rep.add(Finding("b", Status.OK, Severity.INFO, "t", "d"))
+    assert len(rep.vulnerabilities) == 1
+    assert json.loads(rep.to_json())["summary"]["vulnerable"] == 1
+
+
+def test_from_site_discovers_fields():
+    html = ('<form action="/login" method="post">'
+            '<input name="email" type="text">'
+            '<input name="pw" type="password"></form>')
+    cfg = from_site("http://site/page", FakeClient(html))
+    assert cfg.url == "http://site/login"
+    assert cfg.username_field == "email"
+    assert cfg.password_field == "pw"
+
+
+def test_from_site_without_password_raises():
+    with pytest.raises(DiscoveryError):
+        from_site("http://site/page", FakeClient("<form></form>"))
+
+
+def test_from_swagger_v3(tmp_path):
+    spec = {
+        "openapi": "3.0.0",
+        "servers": [{"url": "http://api.example"}],
+        "paths": {
+            "/health": {"get": {"responses": {"200": {"description": "ok"}}}},
+            "/login": {"post": {"requestBody": {"content": {"application/json": {"schema": {
+                "type": "object",
+                "properties": {"username": {"type": "string"}, "password": {"type": "string"}},
+            }}}}}},
+        },
+    }
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(spec))
+    cfg = from_swagger(str(path), FakeClient())
+    assert cfg.url == "http://api.example/login"
+    assert cfg.content_type == "json"
+    assert cfg.password_field == "password"

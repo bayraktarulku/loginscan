@@ -19,7 +19,10 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "License :: OSI Approved :: MIT License",
 ]
-dependencies = []   # yalnızca standart kütüphane
+dependencies = []   # standard library only
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
 
 [project.urls]
 Homepage = "https://github.com/ulkubayraktar/loginscan"
@@ -29,3 +32,6 @@ loginscan = "loginscan.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["loginscan*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
