@@ -36,11 +36,15 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--password-field", default=None, help="Password form field name.")
     p.add_argument("--login-page", dest="login_page_url", default=None,
                    help="HTML page of the login form (for header checks).")
+    p.add_argument("--csrf-field", default=None,
+                   help="Hidden CSRF field name; enables a cookie jar + auto token fetch.")
+    p.add_argument("--csrf-url", default=None,
+                   help="Page to fetch the CSRF token/cookie from (default: login page).")
     p.add_argument("--success", dest="success_indicators", action="append", default=[],
                    metavar="TEXT", help="Text meaning 'login succeeded' (repeatable).")
     p.add_argument("--field", dest="extra_fields", action="append", default=[],
                    metavar="NAME=VALUE", help="Constant field added to every request (repeatable).")
-    p.add_argument("--max-requests", type=int, default=40, help="Total request budget (default 40).")
+    p.add_argument("--max-requests", type=int, default=60, help="Total request budget (default 60).")
     p.add_argument("--delay", type=float, default=0.3, help="Delay between requests (s).")
     p.add_argument("--timeout", type=float, default=10.0, help="Request timeout (s).")
     p.add_argument("--insecure", action="store_true", help="Disable TLS certificate verification.")
@@ -83,6 +87,9 @@ def _build_config(args) -> ScanConfig:
         cfg.password_field = args.password_field
     if args.login_page_url:
         cfg.login_page_url = args.login_page_url
+    if args.csrf_field:
+        cfg.csrf_field = args.csrf_field
+        cfg.csrf_url = args.csrf_url or cfg.csrf_url or cfg.login_page_url or cfg.url
     cfg.known_username = args.known_username
     cfg.success_indicators = args.success_indicators
     cfg.extra_fields = _parse_fields(args.extra_fields)
@@ -105,8 +112,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Discovery failed: {e}", file=sys.stderr)
         return 2
 
+    csrf_note = f", csrf={cfg.csrf_field}" if cfg.csrf_field else ""
     print(f"Target: {cfg.method} {cfg.url}  (fields: {cfg.username_field}/{cfg.password_field}, "
-          f"{cfg.content_type})\n")
+          f"{cfg.content_type}{csrf_note})\n")
 
     try:
         report = Scanner(cfg, authorized=args.i_own_this).run()

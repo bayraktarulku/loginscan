@@ -46,6 +46,19 @@ Scan by **Swagger/OpenAPI link** (JSON spec; endpoint + fields auto-discovered):
 loginscan --swagger https://api.site/openapi.json --i-own-this --user alice
 ```
 
+### Real login forms (CSRF + cookies)
+
+Many real forms set a CSRF cookie and require a matching hidden token. With `--site`,
+loginscan **auto-detects** the CSRF field, keeps a cookie jar, and fetches a fresh token
+before each login request — so scanning works through CSRF protection:
+
+```bash
+loginscan --site https://site/login --i-own-this --user alice
+# Target: POST https://site/login  (fields: username/password, form, csrf=csrf_token)
+```
+
+Override detection when needed: `--csrf-field csrf_token --csrf-url https://site/login`.
+
 Useful options:
 
 | Option | Description |
@@ -56,6 +69,7 @@ Useful options:
 | `--json-body` | Send credentials as JSON instead of form-encoded. |
 | `--username-field` / `--password-field` | Override field names. |
 | `--field csrf=abc` | Constant field added to every request. |
+| `--csrf-field NAME` | Hidden CSRF field name; enables cookie jar + auto token fetch. |
 | `--max-requests 25` | Total request budget. |
 | `--json report.json` | Also write the report as JSON. |
 | `--html report.html` | Also write a shareable, styled HTML report. |

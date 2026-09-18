@@ -24,6 +24,13 @@ class FakeClient:
         return Response(200, {}, self.cookies, self.body, 0.0, url)
 
 
+def test_input_value_extraction():
+    from loginscan.checks.base import _input_value
+    html = '<input type="hidden" name="csrf" value="abc123"><input name="username">'
+    assert _input_value(html, "csrf") == "abc123"
+    assert _input_value(html, "missing") is None
+
+
 def test_authorization_gate():
     with pytest.raises(NotAuthorized):
         ensure_authorized(False)

@@ -20,7 +20,8 @@ class Scanner:
     def run(self) -> Report:
         ensure_authorized(self.authorized)
         cfg = self.config
-        client = HttpClient(cfg.max_requests, cfg.delay, cfg.timeout, cfg.verify_tls)
+        client = HttpClient(cfg.max_requests, cfg.delay, cfg.timeout, cfg.verify_tls,
+                            use_cookies=bool(cfg.csrf_field))
         report = Report(target=cfg.url)
 
         for module in self.checks:

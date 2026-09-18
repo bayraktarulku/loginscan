@@ -15,6 +15,7 @@ from .models import ScanConfig
 
 _USER_HINT = re.compile(r"user|email|login|account|phone|uname", re.I)
 _PASS_HINT = re.compile(r"pass|pwd|secret", re.I)
+_CSRF_HINT = re.compile(r"csrf|xsrf|authenticity|_token", re.I)
 _LOGIN_PATH_HINT = re.compile(r"log[\-_]?in|sign[\-_]?in|authenticate|auth|session|token|oauth", re.I)
 
 
@@ -65,6 +66,9 @@ def from_site(page_url: str, client: HttpClient, **overrides) -> ScanConfig:
     user = next((i for i in candidates if _USER_HINT.search(i["name"])),
                 candidates[0] if candidates else {"name": "username"})
 
+    csrf = next((i["name"] for i in login_form["inputs"]
+                 if i["name"] and _CSRF_HINT.search(i["name"])), None)
+
     action = urljoin(page_url, login_form["action"]) if login_form["action"] else page_url
     cfg = ScanConfig(
         url=action,
@@ -73,6 +77,8 @@ def from_site(page_url: str, client: HttpClient, **overrides) -> ScanConfig:
         username_field=user["name"] or "username",
         password_field=pw["name"] or "password",
         login_page_url=page_url,
+        csrf_field=csrf,
+        csrf_url=page_url if csrf else None,
     )
     _apply_overrides(cfg, overrides)
     return cfg

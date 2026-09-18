@@ -22,6 +22,9 @@ def random_username(prefix: str = "nouser") -> str:
     return f"{prefix}_{secrets.token_hex(4)}"
 
 
+_INPUT_RE = re.compile(r"<input\b[^>]*>", re.I)
+
+
 def build_data(cfg: ScanConfig, username: str, password: str) -> Dict[str, str]:
     data = dict(cfg.extra_fields)
     data[cfg.username_field] = username
@@ -29,9 +32,32 @@ def build_data(cfg: ScanConfig, username: str, password: str) -> Dict[str, str]:
     return data
 
 
+def _input_value(html: str, field: str) -> Optional[str]:
+    for tag in _INPUT_RE.findall(html):
+        name = re.search(r'name=["\']?([^"\'\s>]+)', tag, re.I)
+        if name and name.group(1) == field:
+            val = re.search(r'value=["\']?([^"\'\s>]*)', tag, re.I)
+            return val.group(1) if val else ""
+    return None
+
+
+def _fresh_csrf(client: HttpClient, cfg: ScanConfig) -> Optional[str]:
+    # Fetch the login page so the cookie jar gets a matching CSRF cookie, then
+    # read the token from the hidden field. Done per POST to stay valid even for
+    # per-request tokens.
+    resp = client.get(cfg.csrf_url or cfg.login_page_url or cfg.url)
+    token = _input_value(resp.body, cfg.csrf_field)
+    client.csrf_token = token
+    return token
+
+
 def submit_login(client: HttpClient, cfg: ScanConfig, username: str, password: str) -> Response:
-    return client.request(cfg.method, cfg.url, data=build_data(cfg, username, password),
-                          content_type=cfg.content_type)
+    data = build_data(cfg, username, password)
+    if cfg.csrf_field:
+        token = _fresh_csrf(client, cfg)
+        if token is not None:
+            data[cfg.csrf_field] = token
+    return client.request(cfg.method, cfg.url, data=data, content_type=cfg.content_type)
 
 
 def cookie_names(resp: Response) -> List[str]:

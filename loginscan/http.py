@@ -5,6 +5,7 @@ self-audit scanner rather than a brute-force weapon.
 """
 from __future__ import annotations
 
+import http.cookiejar
 import json
 import re
 import ssl
@@ -42,18 +43,24 @@ class Response:
 
 
 class HttpClient:
-    def __init__(self, max_requests: int, delay: float, timeout: float, verify_tls: bool):
+    def __init__(self, max_requests: int, delay: float, timeout: float, verify_tls: bool,
+                 use_cookies: bool = False):
         self.max_requests = max_requests
         self.delay = delay
         self.timeout = timeout
         self.count = 0
         self.observed_session_tokens: List[Tuple[str, str]] = []
+        self.csrf_token: Optional[str] = None  # cached per scan when CSRF mode is on
         self._ctx = ssl.create_default_context()
         if not verify_tls:
             self._ctx.check_hostname = False
             self._ctx.verify_mode = ssl.CERT_NONE
-        self._opener = urllib.request.build_opener(
-            _NoRedirect, urllib.request.HTTPSHandler(context=self._ctx))
+        handlers = [_NoRedirect, urllib.request.HTTPSHandler(context=self._ctx)]
+        if use_cookies:
+            # A shared cookie jar lets multi-step flows work (e.g. fetch a CSRF
+            # cookie, then submit the matching token).
+            handlers.append(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        self._opener = urllib.request.build_opener(*handlers)
 
     @property
     def remaining(self) -> int:
