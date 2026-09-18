@@ -11,17 +11,21 @@ def _scan(url, **kw):
 def test_vulnerable_server_flags_core_issues(vuln_url):
     report = _scan(vuln_url, known_username="admin")
     vuln = {f.check for f in report.vulnerabilities}
-    assert "sqli" in vuln
-    assert "enumeration" in vuln
-    assert "ratelimit" in vuln
+    assert {"sqli", "enumeration", "ratelimit", "cors", "verb"} <= vuln
 
 
 def test_secure_server_passes_core_checks(secure_url):
     report = _scan(secure_url, known_username="admin")
     vuln = {f.check for f in report.vulnerabilities}
-    assert "sqli" not in vuln
-    assert "enumeration" not in vuln
-    assert "ratelimit" not in vuln
+    for check in ("sqli", "enumeration", "ratelimit", "cors", "verb"):
+        assert check not in vuln
+
+
+def test_cache_header_split(vuln_url, secure_url):
+    vuln = {f.check: f for f in _scan(vuln_url, known_username="admin").findings}
+    secure = {f.check: f for f in _scan(secure_url, known_username="admin").findings}
+    assert vuln["cache"].status == Status.WARNING
+    assert secure["cache"].status == Status.OK
 
 
 def test_vulnerable_server_open_redirect(vuln_url):

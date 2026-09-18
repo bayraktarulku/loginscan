@@ -61,7 +61,7 @@ class ScanConfig:
     known_username: Optional[str] = None
     success_indicators: List[str] = field(default_factory=list)
     login_page_url: Optional[str] = None
-    max_requests: int = 25
+    max_requests: int = 40
     delay: float = 0.3
     timeout: float = 10.0
     verify_tls: bool = True

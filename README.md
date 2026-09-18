@@ -87,13 +87,10 @@ print(report.to_json())
 | `csrf` | CSRF token / cookie / SameSite defense on the login page |
 | `open_redirect` | Unvalidated redirect via `?next=`, `?returnUrl=`, etc. |
 | `jwt` | Passive JWT weaknesses (`alg=none`, missing `exp`) |
+| `verb` | Auth accepted over GET (creds in URLs/logs), TRACE enabled |
+| `cors` | Permissive CORS on the auth endpoint (reflected origin / `*` with credentials) |
+| `cache` | Auth responses missing `Cache-Control: no-store` |
 | `headers` | HTTPS, HSTS, nosniff, clickjacking, Referrer-Policy, version disclosure |
-
-## Roadmap (checks to add next, in order)
-
-- [ ] `verb` — HTTP method handling / verb tampering
-- [ ] `cors` — permissive CORS on the auth endpoint (`ACAO: *` with credentials)
-- [ ] `cache` — sensitive responses missing `Cache-Control: no-store`
 
 ## Learning demo
 

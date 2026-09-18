@@ -43,13 +43,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        # AÇIK #6: ?next= doğrulanmadan yönlendirmeye konuyor (open redirect)
         params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        # AÇIK #6: ?next= doğrulanmadan yönlendirmeye konuyor (open redirect)
         nxt = params.get("next", [None])[0]
         if nxt:
             self.send_response(302)
             self.send_header("Location", nxt)
             self.end_headers()
+            return
+        # AÇIK #7: kimlik doğrulama GET ile de yapılıyor (verb tampering,
+        # şifre URL'de/loglarda görünür)
+        if "username" in params and "password" in params:
+            self._login(params["username"][0], params["password"][0])
             return
         self._send(200, LOGIN_FORM)
 
@@ -57,9 +62,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length).decode()
         data = urllib.parse.parse_qs(body)
-        username = data.get("username", [""])[0]
-        password = data.get("password", [""])[0]
+        self._login(data.get("username", [""])[0], data.get("password", [""])[0])
 
+    def _login(self, username, password):
         c = _conn.cursor()
         # AÇIK #1: kullanıcı girdisi doğrudan sorguya yapıştırılıyor (SQL Injection)
         query = (
@@ -81,6 +86,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_response(200)
             # AÇIK #5: Secure / HttpOnly bayrakları yok
             self.send_header("Set-Cookie", f"session={token}")
+            self._cors()
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(
@@ -99,8 +105,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
             # AÇIK #4: yanlış deneme sayacı / kilit yok — sınırsız denenebilir
             self._send(401, f"<h2>Giriş başarısız</h2><p>{msg}</p>")
 
+    def _cors(self):
+        # AÇIK #8: Origin ne olursa olsun yansıtılıyor + credentials açık (CORS)
+        origin = self.headers.get("Origin")
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Credentials", "true")
+
     def _send(self, code, html):
         self.send_response(code)
+        self._cors()
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(html.encode())

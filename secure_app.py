@@ -147,6 +147,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def _send(self, code, html):
         self.send_response(code)
+        # DEFENSE #7: don't cache auth responses
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(html.encode())

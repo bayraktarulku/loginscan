@@ -40,7 +40,7 @@ def _build_parser() -> argparse.ArgumentParser:
                    metavar="TEXT", help="Text meaning 'login succeeded' (repeatable).")
     p.add_argument("--field", dest="extra_fields", action="append", default=[],
                    metavar="NAME=VALUE", help="Constant field added to every request (repeatable).")
-    p.add_argument("--max-requests", type=int, default=25, help="Total request budget (default 25).")
+    p.add_argument("--max-requests", type=int, default=40, help="Total request budget (default 40).")
     p.add_argument("--delay", type=float, default=0.3, help="Delay between requests (s).")
     p.add_argument("--timeout", type=float, default=10.0, help="Request timeout (s).")
     p.add_argument("--insecure", action="store_true", help="Disable TLS certificate verification.")
