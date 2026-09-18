@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loginscan"
+version = "0.1.0"
+description = "Kendi login endpoint'inizi savunma amaçlı tarayan, bağımlılıksız güvenlik aracı."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Ulku Bayraktar" }]
+keywords = ["security", "login", "authentication", "self-audit", "sql-injection", "defensive"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = []   # yalnızca standart kütüphane
+
+[project.urls]
+Homepage = "https://github.com/ulkubayraktar/loginscan"
+
+[project.scripts]
+loginscan = "loginscan.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["loginscan*"]

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+
+# Sanal ortamlar
+.venv/
+venv/
+env/
+
+# Araç çıktıları / raporlar
+*.report.json
+rapor*.json
+
+# Editör / OS
+.DS_Store
+.idea/
+.vscode/
