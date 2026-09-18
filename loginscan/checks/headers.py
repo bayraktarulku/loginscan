@@ -1,14 +1,4 @@
-"""
-Taşıma güvenliği ve güvenlik başlıkları kontrolü ("birkaç önemli durum daha").
-
-Bakar:
-  * Login HTTP (şifresiz) üzerinden mi gidiyor? → kimlik bilgileri açık ağda.
-  * HSTS (Strict-Transport-Security) var mı?
-  * X-Content-Type-Options: nosniff
-  * Clickjacking koruması: X-Frame-Options veya CSP frame-ancestors
-  * Referrer-Policy
-  * Sunucu/teknoloji sürümü sızıntısı (Server / X-Powered-By)
-"""
+"""Transport and security-header checks (HTTPS, HSTS, nosniff, clickjacking, etc.)."""
 from __future__ import annotations
 
 from typing import List
@@ -25,78 +15,74 @@ def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
     parsed = urlparse(cfg.url)
     is_https = parsed.scheme == "https"
 
-    # 1) Şifresiz HTTP → en önemli taşıma açığı
     if not is_https:
         findings.append(Finding(
             check=CHECK, status=Status.VULNERABLE, severity=Severity.HIGH,
-            title="Login HTTPS kullanmıyor",
-            detail="Kullanıcı adı ve şifre şifrelenmeden (HTTP) gönderiliyor; ağdaki biri okuyabilir.",
-            remediation="Tüm siteyi HTTPS'e taşıyın ve HTTP'yi HTTPS'e yönlendirin.",
+            title="Login is not served over HTTPS",
+            detail="Username and password travel unencrypted; anyone on the network can read them.",
+            remediation="Serve the whole site over HTTPS and redirect HTTP to HTTPS.",
             evidence={"scheme": parsed.scheme},
         ))
 
-    # Başlıkları görmek için login sayfasını (varsa) yoksa endpoint'i GET'le.
     probe_url = cfg.login_page_url or cfg.url
     try:
         resp = client.get(probe_url)
-    except Exception as e:  # noqa: BLE001 - ağ hatasını bulguya çeviriyoruz
+    except Exception as e:  # noqa: BLE001
         findings.append(Finding(
             check=CHECK, status=Status.SKIPPED, severity=Severity.INFO,
-            title="Başlıklar okunamadı",
-            detail=f"{probe_url} GET edilemedi: {e}",
+            title="Could not read headers",
+            detail=f"GET {probe_url} failed: {e}",
         ))
         return findings
 
     def missing(header: str) -> bool:
         return resp.header(header) is None
 
+    csp = (resp.header("content-security-policy") or "").lower()
+
     if is_https and missing("strict-transport-security"):
         findings.append(Finding(
             check=CHECK, status=Status.WARNING, severity=Severity.LOW,
-            title="HSTS başlığı yok",
-            detail="Strict-Transport-Security yok; tarayıcı ilk isteği HTTP'ye düşürebilir.",
-            remediation="Strict-Transport-Security: max-age=31536000; includeSubDomains ekleyin.",
+            title="Missing HSTS header",
+            detail="No Strict-Transport-Security; a first request may be downgraded to HTTP.",
+            remediation="Add Strict-Transport-Security: max-age=31536000; includeSubDomains.",
         ))
-
     if missing("x-content-type-options"):
         findings.append(Finding(
             check=CHECK, status=Status.WARNING, severity=Severity.LOW,
-            title="X-Content-Type-Options yok",
-            detail="nosniff yok; tarayıcı içerik türünü yanlış tahmin edebilir.",
-            remediation="X-Content-Type-Options: nosniff ekleyin.",
+            title="Missing X-Content-Type-Options",
+            detail="No nosniff; the browser may MIME-sniff responses.",
+            remediation="Add X-Content-Type-Options: nosniff.",
         ))
-
-    if missing("x-frame-options") and "frame-ancestors" not in (resp.header("content-security-policy") or "").lower():
+    if missing("x-frame-options") and "frame-ancestors" not in csp:
         findings.append(Finding(
             check=CHECK, status=Status.WARNING, severity=Severity.MEDIUM,
-            title="Clickjacking koruması yok",
-            detail="X-Frame-Options veya CSP frame-ancestors yok; login sayfası iframe'e alınabilir.",
-            remediation="X-Frame-Options: DENY veya CSP frame-ancestors 'none' ekleyin.",
+            title="No clickjacking protection",
+            detail="No X-Frame-Options or CSP frame-ancestors; the login page can be framed.",
+            remediation="Add X-Frame-Options: DENY or CSP frame-ancestors 'none'.",
         ))
-
     if missing("referrer-policy"):
         findings.append(Finding(
             check=CHECK, status=Status.WARNING, severity=Severity.LOW,
-            title="Referrer-Policy yok",
-            detail="Referrer-Policy yok; URL'deki hassas bilgi dış sitelere sızabilir.",
-            remediation="Referrer-Policy: no-referrer veya strict-origin-when-cross-origin ekleyin.",
+            title="Missing Referrer-Policy",
+            detail="No Referrer-Policy; sensitive URL data may leak to third parties.",
+            remediation="Add Referrer-Policy: no-referrer or strict-origin-when-cross-origin.",
         ))
 
     leak = resp.header("server") or resp.header("x-powered-by")
     if leak and any(ch.isdigit() for ch in leak):
         findings.append(Finding(
             check=CHECK, status=Status.WARNING, severity=Severity.LOW,
-            title="Sunucu/teknoloji sürümü sızıyor",
-            detail=f"Yanıt başlığı sürüm bilgisi veriyor: '{leak}'. Saldırgana hedef seçmede yardımcı olur.",
-            remediation="Server / X-Powered-By başlıklarından sürüm bilgisini kaldırın.",
-            evidence={"baslik": leak},
+            title="Server/tech version disclosed",
+            detail=f"Response header reveals version info: '{leak}'.",
+            remediation="Strip version details from Server / X-Powered-By headers.",
+            evidence={"header": leak},
         ))
 
-    # Hiç uyarı yoksa olumlu bir satır bırak.
-    if not any(f for f in findings if f.check == CHECK and f.status != Status.VULNERABLE):
+    if not any(f.check == CHECK and f.status != Status.VULNERABLE for f in findings):
         findings.append(Finding(
             check=CHECK, status=Status.OK, severity=Severity.INFO,
-            title="Temel güvenlik başlıkları mevcut",
-            detail="HSTS/nosniff/çerçeve koruması/Referrer-Policy kontrollerinde eksik görülmedi.",
+            title="Core security headers present",
+            detail="No gaps found in HSTS/nosniff/frame protection/Referrer-Policy.",
         ))
     return findings

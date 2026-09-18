@@ -1,12 +1,4 @@
-"""
-Scanner — kontrolleri sırayla çalıştırıp tek bir Report üretir.
-
-Kullanım (Python):
-    from loginscan import Scanner, ScanConfig
-    cfg = ScanConfig(url="http://127.0.0.1:8001/login", known_username="admin")
-    report = Scanner(cfg, authorized=True).run()
-    print(report.to_text())
-"""
+"""Scanner: runs checks in order and returns a single Report."""
 from __future__ import annotations
 
 from typing import List, Optional
@@ -26,16 +18,9 @@ class Scanner:
         self.checks = checks if checks is not None else ALL_CHECKS
 
     def run(self) -> Report:
-        # Yetki kapısı — onay yoksa buradan geçemez.
         ensure_authorized(self.authorized)
-
         cfg = self.config
-        client = HttpClient(
-            max_requests=cfg.max_requests,
-            delay=cfg.delay,
-            timeout=cfg.timeout,
-            verify_tls=cfg.verify_tls,
-        )
+        client = HttpClient(cfg.max_requests, cfg.delay, cfg.timeout, cfg.verify_tls)
         report = Report(target=cfg.url)
 
         for module in self.checks:
@@ -46,14 +31,14 @@ class Scanner:
             except RequestBudgetExceeded:
                 report.add(Finding(
                     check=name, status=Status.SKIPPED, severity=Severity.INFO,
-                    title=f"'{name}' atlandı — istek bütçesi doldu",
-                    detail=f"Toplam istek sınırına ({cfg.max_requests}) ulaşıldı.",
-                    remediation="Daha kapsamlı tarama için max_requests değerini artırın.",
+                    title=f"'{name}' skipped - request budget exhausted",
+                    detail=f"Reached the total request limit ({cfg.max_requests}).",
+                    remediation="Increase max_requests for a deeper scan.",
                 ))
-            except Exception as e:  # noqa: BLE001 - tek kontrol hatası taramayı durdurmasın
+            except Exception as e:  # noqa: BLE001
                 report.add(Finding(
                     check=name, status=Status.ERROR, severity=Severity.INFO,
-                    title=f"'{name}' kontrolünde hata",
+                    title=f"'{name}' check errored",
                     detail=str(e),
                 ))
         return report

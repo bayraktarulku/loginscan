@@ -1,13 +1,4 @@
-"""
-Kontrollerin paylaştığı yardımcılar:
-  * login form verisi hazırlama
-  * "başarısız giriş" temel (baseline) yanıtı alma
-  * bir yanıtın "giriş başarılı" gibi görünüp görünmediğini kestirme
-
-Not: Genel bir login endpoint'inde başarıyı %100 kesin anlamak zordur.
-Bu yüzden birden çok sinyali birleştirir ve kanıtı rapora koyarız —
-kesin hüküm değil, "incelenmeli" işareti veririz.
-"""
+"""Shared helpers: build login data, get a baseline failed login, guess success."""
 from __future__ import annotations
 
 import re
@@ -17,7 +8,6 @@ from typing import Dict, List, Optional
 from ..http import HttpClient, Response
 from ..models import ScanConfig
 
-# Yanıt gövdesinde görülürse veritabanı hatası sızıntısı sayılır.
 SQL_ERROR_SIGNS = [
     "sql syntax", "sqlite3.", "sqlite error", "psycopg2", "pg::",
     "mysql_fetch", "you have an error in your sql",
@@ -25,7 +15,6 @@ SQL_ERROR_SIGNS = [
     "odbc", "ora-0", "syntax error", "sqlalchemy",
 ]
 
-# Cookie adı bunlardan birine benzerse oturum cookie'si sayılır.
 SESSION_COOKIE_HINT = re.compile(r"sess|token|auth|sid|jwt|login", re.I)
 
 
@@ -41,17 +30,12 @@ def build_data(cfg: ScanConfig, username: str, password: str) -> Dict[str, str]:
 
 
 def submit_login(client: HttpClient, cfg: ScanConfig, username: str, password: str) -> Response:
-    return client.request(cfg.method, cfg.url, data=build_data(cfg, username, password))
+    return client.request(cfg.method, cfg.url, data=build_data(cfg, username, password),
+                          content_type=cfg.content_type)
 
 
 def cookie_names(resp: Response) -> List[str]:
-    names = []
-    for raw in resp.set_cookies:
-        # "name=value; Path=/; HttpOnly" → name
-        head = raw.split("=", 1)[0].strip()
-        if head:
-            names.append(head)
-    return names
+    return [c.split("=", 1)[0].strip() for c in resp.set_cookies if c.split("=", 1)[0].strip()]
 
 
 def session_cookies(resp: Response) -> List[str]:
@@ -59,7 +43,6 @@ def session_cookies(resp: Response) -> List[str]:
 
 
 def baseline_fail(client: HttpClient, cfg: ScanConfig) -> Response:
-    """Kesinlikle var olmayan bir kullanıcıyla giriş dener → 'başarısız' referansı."""
     return submit_login(client, cfg, random_username(), "wrong_" + secrets.token_hex(3))
 
 
@@ -72,23 +55,23 @@ def has_sql_error(body: str) -> Optional[str]:
 
 
 def looks_like_success(resp: Response, baseline: Response, cfg: ScanConfig) -> Optional[str]:
+    """Return a reason string if resp looks like a successful login, else None.
+
+    Conservative on purpose to limit false positives; evidence goes in the report.
     """
-    Yanıt 'giriş başarılı' gibi mi görünüyor? Sinyal bulursa açıklamasını,
-    yoksa None döner. Yanlış-pozitifi azaltmak için muhafazakârdır.
-    """
-    # 1) Kullanıcının verdiği başarı ipuçları
     for token in cfg.success_indicators:
         if token and token.lower() in resp.body.lower():
-            return f"yanıtta başarı metni görüldü: '{token}'"
+            return f"success text seen in response: '{token}'"
 
-    # 2) Başarısız denemede olmayan bir oturum cookie'si şimdi verildiyse
     new_sess = set(session_cookies(resp)) - set(session_cookies(baseline))
     if new_sess:
-        return f"başarısız denemede olmayan oturum cookie'si verildi: {sorted(new_sess)}"
+        return f"session cookie set that the failed baseline did not get: {sorted(new_sess)}"
 
-    # 3) Yönlendirme farkı (başarısızda değil ama burada 3xx)
+    if resp.status < 400 and baseline.status >= 400:
+        return f"status upgraded vs failed baseline (HTTP {resp.status} vs {baseline.status})"
+
     if 300 <= resp.status < 400 and not (300 <= baseline.status < 400):
         loc = resp.header("location") or "?"
-        return f"başarısız denemede olmayan yönlendirme (HTTP {resp.status} → {loc})"
+        return f"redirect not present in failed baseline (HTTP {resp.status} -> {loc})"
 
     return None

@@ -1,7 +1,4 @@
-"""
-Ortak veri modelleri: tarama ayarları (ScanConfig), bulgular (Finding)
-ve önem/durum sabitleri. Diğer tüm modüller buradan besleniyor.
-"""
+"""Core data models: scan config, findings, severity/status constants."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -9,7 +6,6 @@ from typing import Any, Dict, List, Optional
 
 
 class Severity:
-    """Bulgunun önem derecesi — rapor sıralaması bunu kullanır."""
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -20,17 +16,15 @@ class Severity:
 
 
 class Status:
-    """Bir kontrolün sonucu."""
-    VULNERABLE = "vulnerable"   # açık bulundu
-    WARNING = "warning"         # şüpheli / iyileştirilebilir
-    OK = "ok"                   # bu kontrolde sorun yok
-    SKIPPED = "skipped"         # çalıştırılamadı (bütçe/eksik bilgi)
-    ERROR = "error"             # kontrol sırasında hata
+    VULNERABLE = "vulnerable"
+    WARNING = "warning"
+    OK = "ok"
+    SKIPPED = "skipped"
+    ERROR = "error"
 
 
 @dataclass
 class Finding:
-    """Tek bir kontrolün ürettiği tek bir sonuç satırı."""
     check: str
     status: str
     severity: str
@@ -53,25 +47,15 @@ class Finding:
 
 @dataclass
 class ScanConfig:
-    """
-    Tek bir login endpoint'ini nasıl tarayacağımızı anlatan ayarlar.
+    """How to scan a single login endpoint.
 
-    url                : Login isteğinin gittiği tam adres (ör. https://site/login)
-    method             : Login isteği metodu (genelde POST)
-    username_field     : Formdaki kullanıcı adı alanının 'name' değeri
-    password_field     : Formdaki şifre alanının 'name' değeri
-    known_username     : Sizin sisteminizde GERÇEKTEN var olan bir kullanıcı adı.
-                         (enumeration testini güçlendirir; şifre gerekmez)
-    success_indicators : Yanıtta görülürse "giriş başarılı" sayılacak metinler
-    login_page_url     : Login formunun HTML sayfası (başlık/cookie kontrolü için)
-    max_requests       : Toplam istek üst sınırı — aracı düşük hacimde tutar
-    delay              : İstekler arası bekleme (saniye) — nazik davranır
-    timeout            : İstek zaman aşımı (saniye)
-    verify_tls         : HTTPS sertifikası doğrulansın mı
-    extra_fields       : Her isteğe eklenecek sabit form alanları (ör. csrf gerekiyorsa)
+    known_username is a username that really exists on your system (no password
+    needed); it strengthens the enumeration check. success_indicators are strings
+    that, if present in a response, mean the login succeeded.
     """
     url: str
     method: str = "POST"
+    content_type: str = "form"  # "form" or "json"
     username_field: str = "username"
     password_field: str = "password"
     known_username: Optional[str] = None

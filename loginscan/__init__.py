@@ -1,13 +1,7 @@
-"""
-loginscan — kendi login endpoint'inizi savunma amaçlı tarayan, hafif bir araç.
+"""loginscan - a lightweight, dependency-free self-audit scanner for login endpoints.
 
-YALNIZCA size ait olan veya yazılı test izniniz olan sistemlerde kullanın.
-Şifre kırmaz, düşük hacimde çalışır; amacı açığı tespit edip düzeltme önermektir.
-
-Hızlı başlangıç:
-    from loginscan import Scanner, ScanConfig
-    cfg = ScanConfig(url="http://127.0.0.1:8001/", known_username="admin")
-    print(Scanner(cfg, authorized=True).run().to_text())
+Only use it against systems you own or are authorized to test. It does not crack
+passwords and runs low-volume; the goal is to detect issues and suggest fixes.
 """
 from .authorization import AUTHORIZATION_NOTICE, NotAuthorized
 from .models import Finding, ScanConfig, Severity, Status

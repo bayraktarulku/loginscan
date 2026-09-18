@@ -1,6 +1,4 @@
-"""
-Tarama raporu: bulguları toplar, önem sırasına dizer, metin/JSON üretir.
-"""
+"""Scan report: collects findings, sorts them, renders text/JSON."""
 from __future__ import annotations
 
 import json
@@ -9,13 +7,12 @@ from typing import Any, Dict, List
 
 from .models import Finding, Severity, Status
 
-
 _SEV_LABEL = {
-    Severity.CRITICAL: "KRİTİK",
-    Severity.HIGH: "YÜKSEK",
-    Severity.MEDIUM: "ORTA",
-    Severity.LOW: "DÜŞÜK",
-    Severity.INFO: "BİLGİ",
+    Severity.CRITICAL: "CRIT",
+    Severity.HIGH: "HIGH",
+    Severity.MEDIUM: "MED",
+    Severity.LOW: "LOW",
+    Severity.INFO: "INFO",
 }
 
 _STATUS_MARK = {
@@ -47,7 +44,6 @@ class Report:
         return [f for f in self.findings if f.status == Status.WARNING]
 
     def sorted_findings(self) -> List[Finding]:
-        # Önce açık bulunanlar, sonra önem derecesine göre.
         status_rank = {
             Status.VULNERABLE: 0, Status.WARNING: 1, Status.ERROR: 2,
             Status.SKIPPED: 3, Status.OK: 4,
@@ -76,24 +72,23 @@ class Report:
         lines = []
         bar = "=" * 64
         lines.append(bar)
-        lines.append(f" loginscan raporu — hedef: {self.target}")
+        lines.append(f" loginscan report - target: {self.target}")
         lines.append(bar)
         v, w = len(self.vulnerabilities), len(self.warnings)
-        lines.append(f" Bulgu: {len(self.findings)} | Açık: {v} | Uyarı: {w}")
+        lines.append(f" Findings: {len(self.findings)} | Vulnerable: {v} | Warnings: {w}")
         lines.append("")
         for f in self.sorted_findings():
             mark = _STATUS_MARK.get(f.status, "[?]")
             sev = _SEV_LABEL.get(f.severity, f.severity)
-            lines.append(f"{mark} {sev:5} · {f.title}   ({f.check})")
+            lines.append(f"{mark} {sev:4} · {f.title}   ({f.check})")
             if f.detail:
                 lines.append(f"      {f.detail}")
             if f.status in (Status.VULNERABLE, Status.WARNING) and f.remediation:
-                lines.append(f"      → Çözüm: {f.remediation}")
-            if f.evidence:
-                for k, val in f.evidence.items():
-                    lines.append(f"        - {k}: {val}")
+                lines.append(f"      -> Fix: {f.remediation}")
+            for k, val in f.evidence.items():
+                lines.append(f"        - {k}: {val}")
             lines.append("")
         if v == 0 and w == 0:
-            lines.append("Tebrikler: bu kontrollerde belirgin açık görülmedi.")
-            lines.append("(Yine de bu, sistemin tümüyle güvenli olduğu anlamına gelmez.)")
+            lines.append("No obvious issues found in these checks.")
+            lines.append("(This does not prove the system is fully secure.)")
         return "\n".join(lines)

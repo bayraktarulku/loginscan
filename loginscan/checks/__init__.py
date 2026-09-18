@@ -1,9 +1,8 @@
-"""Kontrol modülleri. Her biri run(client, cfg) -> List[Finding] sağlar."""
+"""Check modules. Each exposes run(client, cfg) -> List[Finding]."""
 from . import cookies, enumeration, headers, ratelimit, session, sqli
 
-# Scanner'ın çalıştıracağı sıra. Enumeration'ı sqli'den ÖNCE koyuyoruz:
-# sqli çok sayıda başarısız giriş yapar ve hedefin rate limiter'ını tetikleyip
-# enumeration ölçümünü kirletebilir. En çok istek yapan ratelimit en sonda.
+# enumeration runs before sqli so sqli's many failed logins don't trip the
+# target's rate limiter and pollute the enumeration measurement.
 ALL_CHECKS = [headers, enumeration, sqli, cookies, session, ratelimit]
 
 __all__ = ["ALL_CHECKS", "sqli", "enumeration", "ratelimit", "cookies", "session", "headers"]
