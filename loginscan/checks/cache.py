@@ -1,8 +1,6 @@
 """Cache-Control check: auth responses should not be cacheable."""
 from __future__ import annotations
 
-from typing import List
-
 from ..http import HttpClient
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail
@@ -10,7 +8,7 @@ from .base import baseline_fail
 CHECK = "cache"
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
     resp = baseline_fail(client, cfg)
     cc = (resp.header("cache-control") or "").lower()
 

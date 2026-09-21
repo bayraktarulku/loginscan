@@ -5,7 +5,6 @@ and browser history) and TRACE being enabled (Cross-Site Tracing).
 """
 from __future__ import annotations
 
-from typing import List
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from ..http import HttpClient
@@ -23,8 +22,8 @@ def _url_with(cfg: ScanConfig, username: str, password: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, q, ""))
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
-    findings: List[Finding] = []
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
+    findings: list[Finding] = []
 
     base = client.get(_url_with(cfg, random_username(), "x"))
     probe = client.get(_url_with(cfg, BYPASS_PAYLOAD, "x"))

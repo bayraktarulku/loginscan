@@ -6,8 +6,6 @@ let a simultaneous burst slip through (a TOCTOU race).
 """
 from __future__ import annotations
 
-from typing import List
-
 from ..http import HttpClient, RequestBudgetExceeded
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import build_data, random_username, submit_login
@@ -23,7 +21,7 @@ def _blocked(resp) -> bool:
     return resp.status in BLOCK_STATUSES or any(h in low for h in BLOCK_HINTS)
 
 
-def run(client: HttpClient, cfg: ScanConfig, attempts: int = 6) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig, attempts: int = 6) -> list[Finding]:
     target_user = cfg.known_username or random_username("probe")
     wrong_pw = "definitely-wrong-pw"
 
@@ -90,7 +88,8 @@ def _concurrent_probe(client: HttpClient, cfg: ScanConfig, limit: int, wrong_pw:
             title="Rate limiter bypassable via concurrent requests",
             detail=(f"{len(codes)} simultaneous attempts on a fresh account all passed the "
                     f"limiter (which blocks after {limit} sequential attempts) — a race condition."),
-            remediation="Make the counter atomic (e.g. atomic INCR / DB constraint) so concurrent requests can't slip past.",
+            remediation="Make the counter atomic (e.g. atomic INCR / DB constraint) so "
+                        "concurrent requests can't slip past.",
             evidence={"burst": len(codes), "blocked": blocked, "statuses": codes},
         )
     return Finding(

@@ -1,8 +1,6 @@
 """SQL injection detection (detection-only, non-destructive)."""
 from __future__ import annotations
 
-from typing import List
-
 from ..http import HttpClient
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail, has_sql_error, looks_like_success, submit_login
@@ -13,8 +11,8 @@ AUTH_BYPASS_PAYLOADS = ["admin'--", "admin'#", "' OR '1'='1'--", "' OR 1=1--"]
 ERROR_PROBE = "'"
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
-    findings: List[Finding] = []
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
+    findings: list[Finding] = []
     base = baseline_fail(client, cfg)
 
     probe = submit_login(client, cfg, ERROR_PROBE, "x")

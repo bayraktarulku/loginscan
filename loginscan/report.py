@@ -4,7 +4,7 @@ from __future__ import annotations
 import html
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 from .knowledge import meta_for
 from .models import Finding, Severity, Status
@@ -30,23 +30,23 @@ _STATUS_MARK = {
 @dataclass
 class Report:
     target: str
-    findings: List[Finding] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
     def add(self, finding: Finding) -> None:
         self.findings.append(finding)
 
-    def extend(self, findings: List[Finding]) -> None:
+    def extend(self, findings: list[Finding]) -> None:
         self.findings.extend(findings)
 
     @property
-    def vulnerabilities(self) -> List[Finding]:
+    def vulnerabilities(self) -> list[Finding]:
         return [f for f in self.findings if f.status == Status.VULNERABLE]
 
     @property
-    def warnings(self) -> List[Finding]:
+    def warnings(self) -> list[Finding]:
         return [f for f in self.findings if f.status == Status.WARNING]
 
-    def sorted_findings(self) -> List[Finding]:
+    def sorted_findings(self) -> list[Finding]:
         status_rank = {
             Status.VULNERABLE: 0, Status.WARNING: 1, Status.ERROR: 2,
             Status.SKIPPED: 3, Status.OK: 4,
@@ -57,10 +57,10 @@ class Report:
                            Severity.ORDER.get(f.severity, 9)),
         )
 
-    def score(self) -> Dict[str, Any]:
+    def score(self) -> dict[str, Any]:
         return score_findings(self.findings)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         findings = []
         for f in self.sorted_findings():
             d = f.to_dict()

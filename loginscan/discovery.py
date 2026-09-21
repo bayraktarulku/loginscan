@@ -6,11 +6,9 @@ from __future__ import annotations
 import json
 import re
 import urllib.request
-from html.parser import HTMLParser
-from typing import List, Optional
-from urllib.parse import urljoin, urlparse
-
 from dataclasses import dataclass
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlparse
 
 from .http import HttpClient
 from .models import ScanConfig
@@ -30,8 +28,8 @@ class DiscoveryError(Exception):
 class _FormParser(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.forms: List[dict] = []
-        self._cur: Optional[dict] = None
+        self.forms: list[dict] = []
+        self._cur: dict | None = None
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -93,7 +91,7 @@ def _load_spec(location: str) -> dict:
         with urllib.request.urlopen(location, timeout=15) as r:
             raw = r.read().decode("utf-8", errors="replace")
     else:
-        with open(location, "r", encoding="utf-8") as fh:
+        with open(location, encoding="utf-8") as fh:
             raw = fh.read()
     try:
         return json.loads(raw)
@@ -226,7 +224,7 @@ def from_swagger(location: str, client: HttpClient, **overrides) -> ScanConfig:
     return cfg
 
 
-def discover_endpoints(location: str, client: HttpClient) -> List[Endpoint]:
+def discover_endpoints(location: str, client: HttpClient) -> list[Endpoint]:
     """Return every credential-taking auth endpoint in an OpenAPI/Swagger spec."""
     spec = _load_spec(location)
     base = _base_url(spec, location)

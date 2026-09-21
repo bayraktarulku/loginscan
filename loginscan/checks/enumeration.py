@@ -1,8 +1,6 @@
 """User enumeration detection: does the server treat existing vs unknown users differently?"""
 from __future__ import annotations
 
-from typing import List
-
 from ..http import HttpClient
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import random_username, submit_login
@@ -17,7 +15,7 @@ def _norm_body(text: str) -> str:
     return " ".join(text.split())[:400].lower()
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
     wrong_pw = "wrong-Password-123"
     r_absent = submit_login(client, cfg, random_username("ghost"), wrong_pw)
 

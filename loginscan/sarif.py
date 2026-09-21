@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any
 
 from .knowledge import meta_for
 from .models import Severity, Status
@@ -15,25 +15,27 @@ _LEVEL = {Severity.CRITICAL: "error", Severity.HIGH: "error",
 _REPORTABLE = {Status.VULNERABLE, Status.WARNING}
 
 
-def report_to_sarif(report: Report, version: str = "0") -> Dict[str, Any]:
-    rules: Dict[str, Dict[str, Any]] = {}
+def report_to_sarif(report: Report, version: str = "0") -> dict[str, Any]:
+    rules: dict[str, dict[str, Any]] = {}
     results = []
     for f in report.sorted_findings():
         if f.status not in _REPORTABLE:
             continue
         meta = meta_for(f.check)
         if f.check not in rules:
-            rule: Dict[str, Any] = {
+            rule: dict[str, Any] = {
                 "id": f.check,
                 "name": f.check,
                 "shortDescription": {"text": f.title},
-                "properties": {k: v for k, v in meta.items()},
+                "properties": dict(meta.items()),
             }
             if meta.get("cwe"):
                 rule["properties"]["tags"] = ["security", meta["cwe"]]
                 num = meta["cwe"].split("-")[-1]
                 rule["helpUri"] = f"https://cwe.mitre.org/data/definitions/{num}.html"
             rules[f.check] = rule
+        props: dict[str, Any] = {"severity": f.severity, "status": f.status}
+        props.update(meta)
         results.append({
             "ruleId": f.check,
             "level": _LEVEL.get(f.severity, "note"),
@@ -41,7 +43,7 @@ def report_to_sarif(report: Report, version: str = "0") -> Dict[str, Any]:
                         + (f" Fix: {f.remediation}" if f.remediation else "")},
             "locations": [{"physicalLocation": {
                 "artifactLocation": {"uri": report.target}}}],
-            "properties": {"severity": f.severity, "status": f.status, **meta},
+            "properties": props,
         })
 
     return {

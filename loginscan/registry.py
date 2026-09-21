@@ -7,7 +7,7 @@ wrapped, using its entry-point name as the check name.
 from __future__ import annotations
 
 import importlib.metadata as _md
-from typing import List, Optional
+from typing import Any
 
 from .checks import ALL_CHECKS
 
@@ -31,9 +31,10 @@ def _normalize(name, obj):
     return None
 
 
-def plugin_checks() -> List[object]:
+def plugin_checks() -> list[Any]:
+    eps: Any
     try:
-        eps = _md.entry_points(group=ENTRY_POINT_GROUP)
+        eps = _md.entry_points(group=ENTRY_POINT_GROUP)  # type: ignore[call-arg]
     except TypeError:  # Python 3.9 API
         eps = _md.entry_points().get(ENTRY_POINT_GROUP, [])
     out = []
@@ -47,8 +48,8 @@ def plugin_checks() -> List[object]:
     return out
 
 
-def all_checks() -> List[object]:
-    checks = list(ALL_CHECKS)
+def all_checks() -> list[Any]:
+    checks: list[Any] = list(ALL_CHECKS)
     seen = {getattr(c, "CHECK", None) for c in checks}
     for c in plugin_checks():
         if getattr(c, "CHECK", None) not in seen:
@@ -57,8 +58,8 @@ def all_checks() -> List[object]:
     return checks
 
 
-def select(checks: List[object], only: Optional[List[str]] = None,
-           skip: Optional[List[str]] = None) -> List[object]:
+def select(checks: list[Any], only: list[str] | None = None,
+           skip: list[str] | None = None) -> list[Any]:
     result = checks
     if only:
         wanted = set(only)
@@ -69,5 +70,5 @@ def select(checks: List[object], only: Optional[List[str]] = None,
     return result
 
 
-def check_names(checks: Optional[List[object]] = None) -> List[str]:
+def check_names(checks: list[Any] | None = None) -> list[str]:
     return [getattr(c, "CHECK", "?") for c in (checks if checks is not None else all_checks())]

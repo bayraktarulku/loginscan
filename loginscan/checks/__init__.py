@@ -1,6 +1,18 @@
 """Check modules. Each exposes run(client, cfg) -> List[Finding]."""
-from . import (cache, cookies, cors, csrf, enumeration, headers, jwt,
-               open_redirect, ratelimit, session, sqli, verb)
+from . import (
+               cache,
+               cookies,
+               cors,
+               csrf,
+               enumeration,
+               headers,
+               jwt,
+               open_redirect,
+               ratelimit,
+               session,
+               sqli,
+               verb,
+)
 
 # enumeration runs before sqli so sqli's many failed logins don't trip the
 # target's rate limiter and pollute the enumeration measurement. ratelimit is

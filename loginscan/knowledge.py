@@ -1,9 +1,7 @@
 """Static knowledge: maps each check to CWE and OWASP Top 10 (2021) references."""
 from __future__ import annotations
 
-from typing import Dict
-
-CHECK_META: Dict[str, Dict[str, str]] = {
+CHECK_META: dict[str, dict[str, str]] = {
     "sqli": {"cwe": "CWE-89", "owasp": "A03:2021 Injection"},
     "enumeration": {"cwe": "CWE-204", "owasp": "A07:2021 Identification and Authentication Failures"},
     "ratelimit": {"cwe": "CWE-307", "owasp": "A07:2021 Identification and Authentication Failures"},
@@ -19,5 +17,5 @@ CHECK_META: Dict[str, Dict[str, str]] = {
 }
 
 
-def meta_for(check: str) -> Dict[str, str]:
+def meta_for(check: str) -> dict[str, str]:
     return CHECK_META.get(check, {})

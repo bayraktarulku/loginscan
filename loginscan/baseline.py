@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-from typing import List, Set
 
 from .models import Finding, Status
 from .report import Report
@@ -14,8 +13,8 @@ def fingerprint(f: Finding) -> str:
     return f"{f.check}:{f.title}"
 
 
-def load_baseline(path: str) -> Set[str]:
-    with open(path, "r", encoding="utf-8") as fh:
+def load_baseline(path: str) -> set[str]:
+    with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
     return set(data.get("accepted", []))
 
@@ -27,6 +26,6 @@ def write_baseline(report: Report, path: str) -> int:
     return len(fps)
 
 
-def new_findings(report: Report, baseline: Set[str]) -> List[Finding]:
+def new_findings(report: Report, baseline: set[str]) -> list[Finding]:
     return [f for f in report.findings
             if f.status in _ACCEPTED and fingerprint(f) not in baseline]

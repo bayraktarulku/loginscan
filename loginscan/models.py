@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class Severity:
@@ -31,9 +31,9 @@ class Finding:
     title: str
     detail: str
     remediation: str = ""
-    evidence: Dict[str, Any] = field(default_factory=dict)
+    evidence: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "check": self.check,
             "status": self.status,
@@ -58,13 +58,13 @@ class ScanConfig:
     content_type: str = "form"  # "form" or "json"
     username_field: str = "username"
     password_field: str = "password"
-    known_username: Optional[str] = None
-    success_indicators: List[str] = field(default_factory=list)
-    login_page_url: Optional[str] = None
-    csrf_field: Optional[str] = None   # hidden form field carrying a CSRF token
-    csrf_url: Optional[str] = None     # page to fetch a fresh token/cookie from
+    known_username: str | None = None
+    success_indicators: list[str] = field(default_factory=list)
+    login_page_url: str | None = None
+    csrf_field: str | None = None   # hidden form field carrying a CSRF token
+    csrf_url: str | None = None     # page to fetch a fresh token/cookie from
     max_requests: int = 60
     delay: float = 0.3
     timeout: float = 10.0
     verify_tls: bool = True
-    extra_fields: Dict[str, str] = field(default_factory=dict)
+    extra_fields: dict[str, str] = field(default_factory=dict)

@@ -1,8 +1,6 @@
 """Scanner: runs checks in order and returns a single Report."""
 from __future__ import annotations
 
-from typing import List, Optional
-
 from .authorization import ensure_authorized
 from .http import HttpClient, RequestBudgetExceeded
 from .models import Finding, ScanConfig, Severity, Status
@@ -12,8 +10,8 @@ from .report import Report
 
 class Scanner:
     def __init__(self, config: ScanConfig, authorized: bool = False,
-                 checks: Optional[list] = None,
-                 only: Optional[list] = None, skip: Optional[list] = None):
+                 checks: list | None = None,
+                 only: list | None = None, skip: list | None = None):
         self.config = config
         self.authorized = authorized
         base = checks if checks is not None else all_checks()
@@ -29,7 +27,7 @@ class Scanner:
         for module in self.checks:
             name = getattr(module, "CHECK", module.__name__)
             try:
-                findings: List[Finding] = module.run(client, cfg)
+                findings: list[Finding] = module.run(client, cfg)
                 report.extend(findings)
             except RequestBudgetExceeded:
                 report.add(Finding(

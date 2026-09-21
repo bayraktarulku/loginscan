@@ -1,7 +1,6 @@
 """Transport and security-header checks (HTTPS, HSTS, nosniff, clickjacking, etc.)."""
 from __future__ import annotations
 
-from typing import List
 from urllib.parse import urlparse
 
 from ..http import HttpClient
@@ -10,8 +9,8 @@ from ..models import Finding, ScanConfig, Severity, Status
 CHECK = "headers"
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
-    findings: List[Finding] = []
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
+    findings: list[Finding] = []
     parsed = urlparse(cfg.url)
     is_https = parsed.scheme == "https"
 

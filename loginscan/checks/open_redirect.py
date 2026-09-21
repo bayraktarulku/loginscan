@@ -5,7 +5,6 @@ whether the server issues a redirect (3xx Location) to that external host.
 """
 from __future__ import annotations
 
-from typing import List
 from urllib.parse import urlencode, urlparse, urlsplit, urlunsplit
 
 from ..http import HttpClient
@@ -24,7 +23,7 @@ def _with_query(base_url: str, param: str, value: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, query, ""))
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
     base = cfg.login_page_url or cfg.url
     sentinel_host = urlparse(SENTINEL).netloc
 

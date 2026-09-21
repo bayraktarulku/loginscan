@@ -1,8 +1,6 @@
 """CORS misconfiguration check on the auth endpoint."""
 from __future__ import annotations
 
-from typing import List
-
 from ..http import HttpClient
 from ..models import Finding, ScanConfig, Severity, Status
 
@@ -11,7 +9,7 @@ CHECK = "cors"
 EVIL_ORIGIN = "https://loginscan-evil.example"
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
     resp = client.get(cfg.login_page_url or cfg.url, headers={"Origin": EVIL_ORIGIN})
     acao = resp.header("access-control-allow-origin")
     acac = (resp.header("access-control-allow-credentials") or "").lower() == "true"
@@ -20,8 +18,10 @@ def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
         return [Finding(
             check=CHECK, status=Status.VULNERABLE, severity=Severity.HIGH,
             title="CORS reflects any origin with credentials",
-            detail="The server echoes an arbitrary Origin and allows credentials; any site can read authenticated responses.",
-            remediation="Reflect only an allowlist of trusted origins; never combine credentials with a reflected/wildcard origin.",
+            detail="The server echoes an arbitrary Origin and allows credentials; "
+                   "any site can read authenticated responses.",
+            remediation="Reflect only an allowlist of trusted origins; never combine "
+                        "credentials with a reflected/wildcard origin.",
             evidence={"allow_origin": acao, "allow_credentials": True},
         )]
     if acao == "*" and acac:

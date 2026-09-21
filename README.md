@@ -1,5 +1,10 @@
 # loginscan
 
+[![CI](https://github.com/bayraktarulku/loginscan/actions/workflows/ci.yml/badge.svg)](https://github.com/bayraktarulku/loginscan/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/loginscan.svg)](https://pypi.org/project/loginscan/)
+[![Python](https://img.shields.io/pypi/pyversions/loginscan.svg)](https://pypi.org/project/loginscan/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A lightweight, dependency-free **defensive self-audit scanner** for login endpoints.
 Point it at your own login page or API, and it runs a series of **safe, low-volume**
 checks and reports what is wrong and **how to fix it**. You can scan by giving just a

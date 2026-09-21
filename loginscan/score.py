@@ -1,8 +1,6 @@
 """Turn a set of findings into a 0-100 security score and a letter grade."""
 from __future__ import annotations
 
-from typing import Dict, List
-
 from .models import Finding, Severity, Status
 
 _PENALTY = {Severity.CRITICAL: 45, Severity.HIGH: 30, Severity.MEDIUM: 15,
@@ -21,7 +19,7 @@ def _grade(score: int) -> str:
     return "F"
 
 
-def score_findings(findings: List[Finding]) -> Dict[str, object]:
+def score_findings(findings: list[Finding]) -> dict[str, object]:
     penalty = 0.0
     for f in findings:
         base = _PENALTY.get(f.severity, 0)

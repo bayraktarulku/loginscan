@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import List, Optional
 
 from . import __version__
 from .authorization import AUTHORIZATION_NOTICE, NotAuthorized
@@ -76,7 +75,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _parse_fields(pairs: List[str]) -> dict:
+def _parse_fields(pairs: list[str]) -> dict:
     out = {}
     for item in pairs:
         if "=" not in item:
@@ -138,7 +137,7 @@ def _split(value):
     return [x.strip() for x in value.split(",") if x.strip()] if value else None
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
     if args.list_checks:
@@ -217,7 +216,6 @@ def _run_app(args, conf, cfg, only, skip) -> int:
 
     from .app import scan_app
     from .discovery import discover_endpoints
-    from .models import Status
 
     disco = HttpClient(max_requests=20, delay=0.0, timeout=cfg.timeout, verify_tls=cfg.verify_tls)
     try:
@@ -261,7 +259,6 @@ def _run_app(args, conf, cfg, only, skip) -> int:
 
 def _exit_code(args, conf, report) -> int:
     from .baseline import load_baseline, new_findings
-    from .models import Status
 
     baseline_path = args.baseline or conf.get("baseline")
     if baseline_path:

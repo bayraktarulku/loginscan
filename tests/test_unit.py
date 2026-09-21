@@ -1,11 +1,10 @@
 """Unit tests for pure logic (no network)."""
+import base64
 import json
 
 import pytest
 
 from loginscan.authorization import NotAuthorized, ensure_authorized
-import base64
-
 from loginscan.checks import jwt as jwt_check
 from loginscan.checks import session as session_check
 from loginscan.discovery import DiscoveryError, from_site, from_swagger

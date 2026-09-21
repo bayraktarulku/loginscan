@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import math
 from collections import Counter
-from typing import List
 
 from ..http import HttpClient
 from ..models import Finding, ScanConfig, Severity, Status
@@ -22,7 +21,7 @@ def _entropy_bits(s: str) -> float:
     return per_char * n
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
     tokens = [v for _, v in client.observed_session_tokens]
     if not tokens:
         return [Finding(

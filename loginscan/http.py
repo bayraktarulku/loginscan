@@ -15,7 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Any
 
 _SESSION_COOKIE_HINT = re.compile(r"sess|token|auth|sid|jwt|login", re.I)
 
@@ -33,13 +33,13 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 @dataclass
 class Response:
     status: int
-    headers: Dict[str, str]
+    headers: dict[str, str]
     set_cookies: list
     body: str
     elapsed: float
     url: str
 
-    def header(self, name: str) -> Optional[str]:
+    def header(self, name: str) -> str | None:
         return self.headers.get(name.lower())
 
 
@@ -50,14 +50,14 @@ class HttpClient:
         self.delay = delay
         self.timeout = timeout
         self.count = 0
-        self.observed_session_tokens: List[Tuple[str, str]] = []
-        self.csrf_token: Optional[str] = None  # cached per scan when CSRF mode is on
+        self.observed_session_tokens: list[tuple[str, str]] = []
+        self.csrf_token: str | None = None  # cached per scan when CSRF mode is on
         self._lock = threading.Lock()
         self._ctx = ssl.create_default_context()
         if not verify_tls:
             self._ctx.check_hostname = False
             self._ctx.verify_mode = ssl.CERT_NONE
-        handlers = [_NoRedirect, urllib.request.HTTPSHandler(context=self._ctx)]
+        handlers: list[Any] = [_NoRedirect, urllib.request.HTTPSHandler(context=self._ctx)]
         if use_cookies:
             # A shared cookie jar lets multi-step flows work (e.g. fetch a CSRF
             # cookie, then submit the matching token).
@@ -79,8 +79,8 @@ class HttpClient:
             )
         self.count += 1
 
-    def request(self, method: str, url: str, data: Optional[Dict[str, str]] = None,
-                headers: Optional[Dict[str, str]] = None,
+    def request(self, method: str, url: str, data: dict[str, str] | None = None,
+                headers: dict[str, str] | None = None,
                 content_type: str = "form") -> Response:
         self._spend()
         if self.delay and self.count > 1:
@@ -141,15 +141,15 @@ class HttpClient:
             url=url,
         )
 
-    def post(self, url: str, data: Dict[str, str], headers: Optional[Dict[str, str]] = None,
+    def post(self, url: str, data: dict[str, str], headers: dict[str, str] | None = None,
              content_type: str = "form") -> Response:
         return self.request("POST", url, data=data, headers=headers, content_type=content_type)
 
-    def get(self, url: str, headers: Optional[Dict[str, str]] = None) -> Response:
+    def get(self, url: str, headers: dict[str, str] | None = None) -> Response:
         return self.request("GET", url, data=None, headers=headers)
 
-    def burst(self, method: str, url: str, data: Dict[str, str], n: int,
-              content_type: str = "form") -> List[Response]:
+    def burst(self, method: str, url: str, data: dict[str, str], n: int,
+              content_type: str = "form") -> list[Response]:
         """Fire n identical requests concurrently (no delay) to probe race-y limits.
 
         Costs n from the request budget. Uses a cookie-less opener and does not
@@ -170,7 +170,7 @@ class HttpClient:
             ctype = "application/x-www-form-urlencoded"
         headers = {"User-Agent": "loginscan (self-audit)", "Content-Type": ctype}
 
-        results: List[Response] = []
+        results: list[Response] = []
         barrier = threading.Barrier(n)
 
         def worker():

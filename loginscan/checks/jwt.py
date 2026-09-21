@@ -9,7 +9,6 @@ from __future__ import annotations
 import base64
 import json
 import re
-from typing import List, Optional
 
 from ..http import HttpClient
 from ..models import Finding, ScanConfig, Severity, Status
@@ -20,7 +19,7 @@ CHECK = "jwt"
 _JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
 
 
-def _b64url_json(segment: str) -> Optional[dict]:
+def _b64url_json(segment: str) -> dict | None:
     pad = "=" * (-len(segment) % 4)
     try:
         return json.loads(base64.urlsafe_b64decode(segment + pad))
@@ -28,7 +27,7 @@ def _b64url_json(segment: str) -> Optional[dict]:
         return None
 
 
-def _find_jwt(client: HttpClient, cfg: ScanConfig) -> Optional[str]:
+def _find_jwt(client: HttpClient, cfg: ScanConfig) -> str | None:
     for _, value in client.observed_session_tokens:
         if _JWT_RE.fullmatch(value):
             return value
@@ -41,7 +40,7 @@ def _find_jwt(client: HttpClient, cfg: ScanConfig) -> Optional[str]:
     return m.group(0) if m else None
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
     token = _find_jwt(client, cfg)
     if not token:
         return [Finding(
@@ -56,7 +55,7 @@ def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
     payload = payload or {}
     alg = str(header.get("alg", "")).lower()
 
-    findings: List[Finding] = []
+    findings: list[Finding] = []
     if alg == "none" or (len(parts) >= 3 and parts[2] == ""):
         findings.append(Finding(
             check=CHECK, status=Status.VULNERABLE, severity=Severity.CRITICAL,

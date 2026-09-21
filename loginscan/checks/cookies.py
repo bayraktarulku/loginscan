@@ -1,7 +1,6 @@
 """Session cookie flag check: HttpOnly, Secure, SameSite."""
 from __future__ import annotations
 
-from typing import List
 from urllib.parse import urlparse
 
 from ..http import HttpClient
@@ -22,7 +21,7 @@ def _parse_flags(raw: str) -> dict:
     }
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
     resp = baseline_fail(client, cfg)
     is_https = urlparse(cfg.url).scheme == "https"
 
@@ -33,7 +32,7 @@ def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
             detail="No Set-Cookie on this request (session may be set only on successful login).",
         )]
 
-    findings: List[Finding] = []
+    findings: list[Finding] = []
     for raw in resp.set_cookies:
         f = _parse_flags(raw)
         missing = []

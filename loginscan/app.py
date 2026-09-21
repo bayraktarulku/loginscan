@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .report import Report
 from .scanner import Scanner
@@ -10,7 +10,7 @@ from .scanner import Scanner
 
 @dataclass
 class AppReport:
-    sections: List[Dict[str, Any]] = field(default_factory=list)  # {label, kind, report}
+    sections: list[dict[str, Any]] = field(default_factory=list)  # {label, kind, report}
 
     def add(self, label: str, kind: str, report: Report) -> None:
         self.sections.append({"label": label, "kind": kind, "report": report})
@@ -19,7 +19,7 @@ class AppReport:
     def all_vulnerabilities(self):
         return [f for s in self.sections for f in s["report"].vulnerabilities]
 
-    def worst_score(self) -> Dict[str, Any]:
+    def worst_score(self) -> dict[str, Any]:
         if not self.sections:
             return {"score": 100, "grade": "A"}
         return min((s["report"].score() for s in self.sections), key=lambda x: x["score"])
@@ -36,7 +36,7 @@ class AppReport:
             out.append("")
         return "\n".join(out)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         ws = self.worst_score()
         return {
             "summary": {
@@ -53,7 +53,7 @@ class AppReport:
 
 
 def scan_app(endpoints, authorized: bool = False,
-             only: Optional[list] = None, skip: Optional[list] = None) -> AppReport:
+             only: list | None = None, skip: list | None = None) -> AppReport:
     app = AppReport()
     for ep in endpoints:
         report = Scanner(ep.config, authorized=authorized, only=only, skip=skip).run()

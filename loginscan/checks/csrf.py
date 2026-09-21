@@ -6,7 +6,6 @@ or a SameSite cookie. If none is present, CSRF is likely possible.
 from __future__ import annotations
 
 import re
-from typing import List
 
 from ..http import HttpClient
 from ..models import Finding, ScanConfig, Severity, Status
@@ -19,7 +18,7 @@ _META_TOKEN = re.compile(r'<meta[^>]+name=["\'](?:csrf|xsrf)[-_]?token["\']', re
 _CSRF_COOKIE = re.compile(r"csrf|xsrf", re.I)
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> List[Finding]:
+def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
     page = client.get(cfg.login_page_url or cfg.url)
     body = page.body
 
