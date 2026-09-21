@@ -20,3 +20,6 @@ rapor*.json
 .DS_Store
 .idea/
 .vscode/
+
+# mkdocs build output
+site/

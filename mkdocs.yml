@@ -1,0 +1,26 @@
+site_name: loginscan
+site_description: Defensive, dependency-free security scanner for your own login endpoints
+repo_url: https://github.com/bayraktarulku/loginscan
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: red
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - scheme: slate
+      primary: red
+      toggle: { icon: material/weather-sunny, name: Light mode }
+  features:
+    - navigation.sections
+    - content.code.copy
+nav:
+  - Home: index.md
+  - Usage: usage.md
+  - Checks: checks.md
+  - CI & config: ci.md
+  - Writing a plugin: plugins.md
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - tables

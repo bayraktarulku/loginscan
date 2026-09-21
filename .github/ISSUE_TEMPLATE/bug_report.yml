@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a problem with loginscan (the tool itself, not a target site)
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you run and what went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. loginscan --site http://127.0.0.1:8001/ --i-own-this ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: loginscan version
+      placeholder: "1.1.0 (loginscan --version)"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.11"
+  - type: checkboxes
+    id: auth
+    attributes:
+      label: Confirmation
+      options:
+        - label: This report does not include exploits or details targeting systems I don't own.
+          required: true
