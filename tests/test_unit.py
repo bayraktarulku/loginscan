@@ -52,6 +52,37 @@ def test_input_value_extraction():
     assert _input_value(html, "missing") is None
 
 
+def test_config_load_json(tmp_path):
+    from loginscan.config import load_config
+    p = tmp_path / "c.json"
+    p.write_text('{"site": "http://x/", "user": "alice", "only": ["sqli"]}')
+    conf = load_config(str(p))
+    assert conf["user"] == "alice" and conf["only"] == ["sqli"]
+
+
+def test_baseline_roundtrip_and_new_findings():
+    from loginscan.baseline import fingerprint, new_findings
+    rep = Report("t")
+    known = Finding("sqli", Status.VULNERABLE, Severity.CRITICAL, "SQLi", "d")
+    fresh = Finding("cors", Status.VULNERABLE, Severity.HIGH, "CORS", "d")
+    rep.add(known)
+    rep.add(fresh)
+    baseline = {fingerprint(known)}
+    offenders = new_findings(rep, baseline)
+    assert [f.check for f in offenders] == ["cors"]
+
+
+def test_success_detection_json_token():
+    from loginscan.checks.base import looks_like_success
+    from loginscan.http import Response
+    from loginscan.models import ScanConfig
+    cfg = ScanConfig(url="http://x/")
+    baseline = Response(401, {}, [], '{"error":"bad"}', 0.0, "u")
+    ok = Response(200, {}, [], '{"access_token":"abc"}', 0.0, "u")
+    assert looks_like_success(ok, baseline, cfg)
+    assert looks_like_success(baseline, baseline, cfg) is None
+
+
 def test_authorization_gate():
     with pytest.raises(NotAuthorized):
         ensure_authorized(False)

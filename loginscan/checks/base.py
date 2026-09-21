@@ -16,6 +16,8 @@ SQL_ERROR_SIGNS = [
 ]
 
 SESSION_COOKIE_HINT = re.compile(r"sess|token|auth|sid|jwt|login", re.I)
+# JSON APIs signal success by returning a token in the body.
+TOKEN_KEY_HINT = re.compile(r'"(access_token|id_token|refresh_token|token|jwt)"\s*:', re.I)
 
 
 def random_username(prefix: str = "nouser") -> str:
@@ -88,6 +90,9 @@ def looks_like_success(resp: Response, baseline: Response, cfg: ScanConfig) -> O
     for token in cfg.success_indicators:
         if token and token.lower() in resp.body.lower():
             return f"success text seen in response: '{token}'"
+
+    if TOKEN_KEY_HINT.search(resp.body) and not TOKEN_KEY_HINT.search(baseline.body):
+        return "auth token returned in response body"
 
     new_sess = set(session_cookies(resp)) - set(session_cookies(baseline))
     if new_sess:

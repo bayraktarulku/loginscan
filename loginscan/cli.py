@@ -50,10 +50,20 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Skip these checks (comma-separated).")
     p.add_argument("--list-checks", action="store_true",
                    help="List all available checks (built-in + plugins) and exit.")
-    p.add_argument("--max-requests", type=int, default=60, help="Total request budget (default 60).")
-    p.add_argument("--delay", type=float, default=0.3, help="Delay between requests (s).")
-    p.add_argument("--timeout", type=float, default=10.0, help="Request timeout (s).")
+    p.add_argument("--max-requests", type=int, default=None, help="Total request budget (default 60).")
+    p.add_argument("--delay", type=float, default=None, help="Delay between requests (s, default 0.3).")
+    p.add_argument("--timeout", type=float, default=None, help="Request timeout (s, default 10).")
     p.add_argument("--insecure", action="store_true", help="Disable TLS certificate verification.")
+    p.add_argument("--config", default=None, metavar="FILE",
+                   help="Load a scan profile (JSON, or YAML with pyyaml). CLI flags override it.")
+    p.add_argument("--baseline", default=None, metavar="FILE",
+                   help="Accept findings listed in this baseline; fail only on NEW ones.")
+    p.add_argument("--write-baseline", default=None, metavar="FILE",
+                   help="Write current findings to a baseline file and exit 0.")
+    p.add_argument("--fail-on", choices=["vulnerable", "warning", "never"], default=None,
+                   help="What makes the run fail (default vulnerable).")
+    p.add_argument("--min-score", type=int, default=None, metavar="N",
+                   help="Fail if the security score is below N.")
     p.add_argument("--json", dest="json_path", default=None, metavar="FILE",
                    help="Also write the report as JSON to this file.")
     p.add_argument("--html", dest="html_path", default=None, metavar="FILE",
@@ -74,37 +84,51 @@ def _parse_fields(pairs: List[str]) -> dict:
     return out
 
 
-def _build_config(args) -> ScanConfig:
-    disco_client = HttpClient(max_requests=5, delay=0.0, timeout=args.timeout,
-                              verify_tls=not args.insecure)
-    if args.swagger:
-        cfg = from_swagger(args.swagger, disco_client)
-    elif args.site:
-        cfg = from_site(args.site, disco_client)
-    else:
-        cfg = ScanConfig(url=args.url)
+def _build_config(args, conf) -> ScanConfig:
+    def pick(cli_val, key, default=None):
+        return cli_val if cli_val is not None else conf.get(key, default)
 
-    # Apply explicit overrides on top of discovery / defaults.
-    if args.method:
-        cfg.method = args.method
-    if args.json_body:
+    timeout = pick(args.timeout, "timeout", 10.0)
+    insecure = args.insecure or conf.get("insecure", False)
+    target = args.url or conf.get("url")
+    site = args.site or conf.get("site")
+    swagger = args.swagger or conf.get("swagger")
+
+    disco_client = HttpClient(max_requests=5, delay=0.0, timeout=timeout, verify_tls=not insecure)
+    if swagger:
+        cfg = from_swagger(swagger, disco_client)
+    elif site:
+        cfg = from_site(site, disco_client)
+    else:
+        cfg = ScanConfig(url=target)
+
+    method = pick(args.method, "method")
+    if method:
+        cfg.method = method
+    if args.json_body or conf.get("json_body"):
         cfg.content_type = "json"
-    if args.username_field:
-        cfg.username_field = args.username_field
-    if args.password_field:
-        cfg.password_field = args.password_field
-    if args.login_page_url:
-        cfg.login_page_url = args.login_page_url
-    if args.csrf_field:
-        cfg.csrf_field = args.csrf_field
-        cfg.csrf_url = args.csrf_url or cfg.csrf_url or cfg.login_page_url or cfg.url
-    cfg.known_username = args.known_username
-    cfg.success_indicators = args.success_indicators
-    cfg.extra_fields = _parse_fields(args.extra_fields)
-    cfg.max_requests = args.max_requests
-    cfg.delay = args.delay
-    cfg.timeout = args.timeout
-    cfg.verify_tls = not args.insecure
+    uf = pick(args.username_field, "username_field")
+    if uf:
+        cfg.username_field = uf
+    pf = pick(args.password_field, "password_field")
+    if pf:
+        cfg.password_field = pf
+    lp = pick(args.login_page_url, "login_page")
+    if lp:
+        cfg.login_page_url = lp
+    csrf = pick(args.csrf_field, "csrf_field")
+    if csrf:
+        cfg.csrf_field = csrf
+        cfg.csrf_url = pick(args.csrf_url, "csrf_url") or cfg.csrf_url or cfg.login_page_url or cfg.url
+
+    cfg.known_username = pick(args.known_username, "user")
+    cfg.success_indicators = args.success_indicators or conf.get("success", [])
+    fields = _parse_fields(args.extra_fields) if args.extra_fields else conf.get("fields", {})
+    cfg.extra_fields = dict(fields)
+    cfg.max_requests = pick(args.max_requests, "max_requests", 60)
+    cfg.delay = pick(args.delay, "delay", 0.3)
+    cfg.timeout = timeout
+    cfg.verify_tls = not insecure
     return cfg
 
 
@@ -122,23 +146,35 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"  - {name}")
         return 0
 
-    if not (args.url or args.site or args.swagger):
-        print("Give a target: a URL, --site URL, or --swagger URL/file.", file=sys.stderr)
+    conf = {}
+    if args.config:
+        from .config import ConfigError, load_config
+        try:
+            conf = load_config(args.config)
+        except (OSError, ConfigError, ValueError) as e:
+            print(f"Config error: {e}", file=sys.stderr)
+            return 2
+
+    if not (args.url or args.site or args.swagger or conf.get("url")
+            or conf.get("site") or conf.get("swagger")):
+        print("Give a target: a URL, --site URL, --swagger URL/file, or a --config.", file=sys.stderr)
         return 2
 
     try:
-        cfg = _build_config(args)
+        cfg = _build_config(args, conf)
     except DiscoveryError as e:
         print(f"Discovery failed: {e}", file=sys.stderr)
         return 2
+
+    only = _split(args.only) or conf.get("only")
+    skip = _split(args.skip) or conf.get("skip")
 
     csrf_note = f", csrf={cfg.csrf_field}" if cfg.csrf_field else ""
     print(f"Target: {cfg.method} {cfg.url}  (fields: {cfg.username_field}/{cfg.password_field}, "
           f"{cfg.content_type}{csrf_note})\n")
 
     try:
-        report = Scanner(cfg, authorized=args.i_own_this,
-                         only=_split(args.only), skip=_split(args.skip)).run()
+        report = Scanner(cfg, authorized=args.i_own_this, only=only, skip=skip).run()
     except NotAuthorized as e:
         print(str(e), file=sys.stderr)
         return 2
@@ -158,7 +194,40 @@ def main(argv: Optional[List[str]] = None) -> int:
             fh.write(report_to_sarif_json(report, __version__))
         print(f"SARIF report written: {args.sarif_path}")
 
-    return 1 if any(f.status == Status.VULNERABLE for f in report.findings) else 0
+    if args.write_baseline:
+        from .baseline import write_baseline
+        n = write_baseline(report, args.write_baseline)
+        print(f"Baseline written ({n} findings): {args.write_baseline}")
+        return 0
+
+    return _exit_code(args, conf, report)
+
+
+def _exit_code(args, conf, report) -> int:
+    from .baseline import load_baseline, new_findings
+    from .models import Status
+
+    baseline_path = args.baseline or conf.get("baseline")
+    if baseline_path:
+        base = load_baseline(baseline_path)
+        offenders = new_findings(report, base)
+    else:
+        offenders = [f for f in report.findings
+                     if f.status in (Status.VULNERABLE, Status.WARNING)]
+
+    min_score = args.min_score if args.min_score is not None else conf.get("min_score")
+    if min_score is not None and report.score()["score"] < min_score:
+        print(f"\nFAIL: score {report.score()['score']} < min-score {min_score}", file=sys.stderr)
+        return 1
+
+    fail_on = args.fail_on or conf.get("fail_on", "vulnerable")
+    if fail_on == "never":
+        return 0
+    if fail_on == "warning":
+        bad = [f for f in offenders if f.status in (Status.VULNERABLE, Status.WARNING)]
+    else:
+        bad = [f for f in offenders if f.status == Status.VULNERABLE]
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":

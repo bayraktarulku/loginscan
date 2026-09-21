@@ -147,6 +147,28 @@ mycheck = "mypkg.mycheck"
 After `pip install mypkg`, `loginscan --list-checks` shows it and scans run it automatically.
 Use `--only a,b` / `--skip x,y` to control which checks run.
 
+## Config profiles, baseline & CI gating
+
+Save a reusable profile (JSON, or YAML with `pyyaml`) instead of long command lines:
+
+```json
+{ "site": "https://staging/login", "user": "alice", "success": ["Welcome"],
+  "skip": ["cache"], "min_score": 80, "fail_on": "vulnerable" }
+```
+
+```bash
+loginscan --config profile.json --i-own-this
+```
+
+CLI flags override the config. Gate CI with `--fail-on {vulnerable,warning,never}` and
+`--min-score N` (exit `1` on failure). Accept existing findings with a **baseline** so only
+NEW issues fail the build:
+
+```bash
+loginscan --site https://staging/login --i-own-this --write-baseline baseline.json
+loginscan --site https://staging/login --i-own-this --baseline baseline.json   # passes until something new appears
+```
+
 ## Security score
 
 Every report includes a **0–100 score and a letter grade** (A–F) derived from the
