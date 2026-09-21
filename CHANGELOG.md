@@ -5,6 +5,13 @@ All notable changes to loginscan are documented here. The format follows
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- Attacker-perspective detection checks (all low-volume, non-destructive):
+  - `ratelimit_bypass` — spoofed `X-Forwarded-For`/`X-Real-IP` resets a header-trusting limiter.
+  - `spray` — no IP-level throttling across accounts (password-spraying resilience).
+  - `host_injection` — forged `Host`/`X-Forwarded-Host` reflected (password-reset poisoning).
+  - `debug_leak` — stack traces / debug pages exposed in error responses.
+
 ### Changed
 - Internal architecture refactor (no user-facing behaviour change):
   - Checks now receive a `CheckContext` (explicit HTTP + session observation) instead of

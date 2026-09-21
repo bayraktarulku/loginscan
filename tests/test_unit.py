@@ -69,6 +69,52 @@ def test_concurrent_ratelimit_race_detected():
     assert ok.status == Status.OK
 
 
+class _RLCtx:
+    """Fake CheckContext for rate-limit-family checks (deterministic, no network)."""
+
+    def __init__(self, block_after=None, honor_xff=False):
+        from loginscan.http import Response
+        self._Response = Response
+        self.remaining = 100
+        self._n = 0
+        self._block_after = block_after
+        self._honor_xff = honor_xff
+        self._blocked = False
+
+    def request(self, method, url, data=None, headers=None, content_type="form"):
+        headers = headers or {}
+        if self._honor_xff and headers.get("X-Forwarded-For"):
+            return self._Response(401, {}, [], "", 0.0, url)  # spoofed IP resets the limiter
+        self._n += 1
+        if self._block_after is not None and self._n >= self._block_after:
+            self._blocked = True
+        return self._Response(429 if self._blocked else 401, {}, [], "", 0.0, url)
+
+
+def test_spray_without_ip_throttle_warns():
+    from loginscan.checks import spray as spray_check
+    findings = spray_check.run(_RLCtx(block_after=None), ScanConfig(url="http://x/"))
+    assert findings[0].status == Status.WARNING
+
+
+def test_spray_with_ip_throttle_ok():
+    from loginscan.checks import spray as spray_check
+    findings = spray_check.run(_RLCtx(block_after=3), ScanConfig(url="http://x/"))
+    assert findings[0].status == Status.OK
+
+
+def test_ratelimit_bypass_via_header_detected():
+    from loginscan.checks import ratelimit_bypass as rlb
+    findings = rlb.run(_RLCtx(block_after=3, honor_xff=True), ScanConfig(url="http://x/"))
+    assert findings[0].status == Status.VULNERABLE
+
+
+def test_ratelimit_bypass_resistant_ok():
+    from loginscan.checks import ratelimit_bypass as rlb
+    findings = rlb.run(_RLCtx(block_after=3, honor_xff=False), ScanConfig(url="http://x/"))
+    assert findings[0].status == Status.OK
+
+
 def test_input_value_extraction():
     from loginscan.checks.base import _input_value
     html = '<input type="hidden" name="csrf" value="abc123"><input name="username">'

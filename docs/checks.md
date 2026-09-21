@@ -1,6 +1,6 @@
 # Checks
 
-loginscan ships 13 built-in checks. Each finding carries a severity, a **CWE** and an
+loginscan ships 17 built-in checks. Each finding carries a severity, a **CWE** and an
 **OWASP Top 10 (2021)** reference, and a remediation.
 
 | Check | What it looks for | CWE |
@@ -8,6 +8,10 @@ loginscan ships 13 built-in checks. Each finding carries a severity, a **CWE** a
 | `sqli` | SQL-injection auth bypass + database error leakage | CWE-89 |
 | `enumeration` | Different responses for existing vs unknown users | CWE-204 |
 | `ratelimit` | Blocking of repeated failed logins — sequential **and** concurrent burst (race) | CWE-307 |
+| `ratelimit_bypass` | Spoofed X-Forwarded-For/X-Real-IP resets the limiter | CWE-290 |
+| `spray` | IP-level throttling across accounts (spraying resilience) | CWE-307 |
+| `host_injection` | Forged Host/X-Forwarded-Host reflected (reset poisoning) | CWE-644 |
+| `debug_leak` | Stack traces / debug pages in error responses | CWE-209 |
 | `cookies` | Session cookie HttpOnly / Secure / SameSite flags | CWE-1004 |
 | `session` | Predictable session tokens (short / numeric / sequential / low-entropy) | CWE-330 |
 | `session_fixation` | Session id not rotated on login (stateful; needs `--password`) | CWE-384 |

@@ -19,6 +19,15 @@ SESSION_COOKIE_HINT = re.compile(r"sess|token|auth|sid|jwt|login", re.I)
 # JSON APIs signal success by returning a token in the body.
 TOKEN_KEY_HINT = re.compile(r'"(access_token|id_token|refresh_token|token|jwt)"\s*:', re.I)
 
+# Signals that a request was throttled/blocked (shared by rate-limit checks).
+BLOCK_STATUSES = {429, 403, 503}
+_BLOCK_HINTS = ["too many", "rate limit", "try again later", "captcha", "locked", "blocked"]
+
+
+def is_blocked(resp) -> bool:
+    low = resp.body.lower()
+    return resp.status in BLOCK_STATUSES or any(h in low for h in _BLOCK_HINTS)
+
 
 def random_username(prefix: str = "nouser") -> str:
     return f"{prefix}_{secrets.token_hex(4)}"

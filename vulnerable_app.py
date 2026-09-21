@@ -15,6 +15,7 @@ Sonra tarayıcı:  http://127.0.0.1:8001/
 import sqlite3
 import http.server
 import urllib.parse
+import traceback
 
 DB = ":memory:"
 _conn = sqlite3.connect(DB, check_same_thread=False)
@@ -56,7 +57,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if "username" in params and "password" in params:
             self._login(params["username"][0], params["password"][0])
             return
-        self._send(200, LOGIN_FORM)
+        host = self.headers.get("Host", "")
+        page = LOGIN_FORM + f'<p>Reset link: <a href="http://{host}/reset">reset</a></p>'
+        self._send(200, page)
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -74,8 +77,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         print(f"[VULN][SQL] {query}")
         try:
             row = c.execute(query).fetchone()
-        except sqlite3.Error as e:
-            self._send(500, f"<p>SQL hatası: {e}</p>")
+        except sqlite3.Error:
+            self._send(500, f"<h2>Server error</h2><pre>{traceback.format_exc()}</pre>")
             return
 
         if row:

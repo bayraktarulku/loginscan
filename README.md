@@ -119,6 +119,10 @@ print(report.to_json())
 | `sqli` | SQL-injection auth bypass + database error leakage |
 | `enumeration` | Different responses for existing vs unknown users |
 | `ratelimit` | Whether repeated failed logins get blocked — sequentially **and** in a concurrent burst (catches race-condition bypasses) |
+| `ratelimit_bypass` | Whether a spoofed `X-Forwarded-For`/`X-Real-IP` header resets the limiter |
+| `spray` | Whether there is IP-level throttling across accounts (password-spraying resilience) |
+| `host_injection` | Forged `Host`/`X-Forwarded-Host` reflected (password-reset poisoning) |
+| `debug_leak` | Stack traces / debug pages exposed in error responses |
 | `cookies` | Session cookie HttpOnly / Secure / SameSite flags |
 | `session` | Predictable session tokens (short / numeric / sequential / low-entropy) |
 | `session_fixation` | Session id not rotated on login (stateful; needs `--password`) |

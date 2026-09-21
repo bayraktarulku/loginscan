@@ -61,7 +61,7 @@ def test_session_rotation_passes():
 
 def _scan(url, **kw):
     cfg = ScanConfig(url=url, success_indicators=["Giriş başarılı"],
-                     delay=0.0, max_requests=40, **kw)
+                     delay=0.0, max_requests=120, **kw)
     return Scanner(cfg, authorized=True).run()
 
 
@@ -137,3 +137,15 @@ def test_secure_server_has_csrf_defense(secure_url):
     report = _scan(secure_url, known_username="admin")
     csrf = [f for f in report.findings if f.check == "csrf"]
     assert csrf and csrf[0].status == Status.OK
+
+
+def test_host_injection_and_debug_leak_on_vulnerable(vuln_url):
+    vuln = {f.check for f in _scan(vuln_url, known_username="admin").vulnerabilities}
+    assert "host_injection" in vuln
+    assert "debug_leak" in vuln
+
+
+def test_host_injection_and_debug_leak_clean_on_secure(secure_url):
+    checks = {f.check: f for f in _scan(secure_url, known_username="admin").findings}
+    assert checks["host_injection"].status == Status.OK
+    assert checks["debug_leak"].status == Status.OK

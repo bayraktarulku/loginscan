@@ -9,20 +9,12 @@ from __future__ import annotations
 from ..context import CheckContext
 from ..http import RequestBudgetExceeded
 from ..models import Finding, ScanConfig, Severity, Status
-from .base import build_data, random_username, submit_login
+from .base import build_data, is_blocked, random_username, submit_login
 
 CHECK = "ratelimit"
 ORDER = 200
 CWE = "CWE-307"
 OWASP = "A07:2021 Identification and Authentication Failures"
-
-BLOCK_STATUSES = {429, 403, 503}
-BLOCK_HINTS = ["too many", "rate limit", "try again later", "captcha", "locked", "blocked"]
-
-
-def _blocked(resp) -> bool:
-    low = resp.body.lower()
-    return resp.status in BLOCK_STATUSES or any(h in low for h in BLOCK_HINTS)
 
 
 def run(ctx: CheckContext, cfg: ScanConfig, attempts: int = 6) -> list[Finding]:
@@ -37,7 +29,7 @@ def run(ctx: CheckContext, cfg: ScanConfig, attempts: int = 6) -> list[Finding]:
                 break
             resp = submit_login(ctx, cfg, target_user, wrong_pw)
             statuses.append(resp.status)
-            if _blocked(resp):
+            if is_blocked(resp):
                 blocked_at = i
                 break
     except RequestBudgetExceeded:
@@ -85,7 +77,7 @@ def _concurrent_probe(ctx: CheckContext, cfg: ScanConfig, limit: int, wrong_pw: 
         return None
 
     codes = [r.status for r in responses]
-    blocked = sum(1 for r in responses if _blocked(r))
+    blocked = sum(1 for r in responses if is_blocked(r))
     if blocked == 0:
         return Finding(
             check=CHECK, status=Status.VULNERABLE, severity=Severity.MEDIUM,
