@@ -5,6 +5,13 @@ All notable changes to loginscan are documented here. The format follows
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+### Changed
+- Internal architecture refactor (no user-facing behaviour change):
+  - Checks now receive a `CheckContext` (explicit HTTP + session observation) instead of
+    reaching into the transport client; `HttpClient` is pure transport.
+  - Check run-order is declared as data (`ORDER` per check) rather than a hardcoded list.
+  - CWE/OWASP metadata is co-located with each check; plugins can declare `CWE`/`OWASP`/`ORDER`.
+  - Split the CLI into `cli` (parser + dispatch), `resolve` (config) and `report_io` (output/gate).
 
 ## [1.2.0] - 2026-09-21
 ### Added
