@@ -7,6 +7,8 @@ from .base import baseline_fail
 
 CHECK = "cache"
 ORDER = 40
+CWE = "CWE-525"
+OWASP = "A05:2021 Security Misconfiguration"
 
 
 def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:

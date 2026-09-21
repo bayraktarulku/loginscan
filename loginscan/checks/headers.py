@@ -8,6 +8,8 @@ from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "headers"
 ORDER = 10
+CWE = "CWE-693"
+OWASP = "A05:2021 Security Misconfiguration"
 
 
 def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:

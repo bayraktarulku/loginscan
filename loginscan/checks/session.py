@@ -9,6 +9,8 @@ from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "session"
 ORDER = 100
+CWE = "CWE-330"
+OWASP = "A07:2021 Identification and Authentication Failures"
 
 MIN_TOKEN_LEN = 16
 

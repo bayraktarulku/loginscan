@@ -13,6 +13,8 @@ from .base import looks_like_success, random_username
 
 CHECK = "verb"
 ORDER = 50
+CWE = "CWE-650"
+OWASP = "A05:2021 Security Misconfiguration"
 
 BYPASS_PAYLOAD = "admin'--"
 

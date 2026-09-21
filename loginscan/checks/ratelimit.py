@@ -13,6 +13,8 @@ from .base import build_data, random_username, submit_login
 
 CHECK = "ratelimit"
 ORDER = 200
+CWE = "CWE-307"
+OWASP = "A07:2021 Identification and Authentication Failures"
 
 BLOCK_STATUSES = {429, 403, 503}
 BLOCK_HINTS = ["too many", "rate limit", "try again later", "captcha", "locked", "blocked"]

@@ -12,6 +12,8 @@ from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "csrf"
 ORDER = 20
+CWE = "CWE-352"
+OWASP = "A01:2021 Broken Access Control"
 
 _TOKEN_INPUT = re.compile(
     r'<input[^>]*name=["\']?[^"\'>\s]*(?:csrf|xsrf|authenticity|_token)[^"\'>\s]*', re.I)

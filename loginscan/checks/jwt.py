@@ -16,6 +16,8 @@ from .base import baseline_fail
 
 CHECK = "jwt"
 ORDER = 120
+CWE = "CWE-347"
+OWASP = "A02:2021 Cryptographic Failures"
 
 _JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
 

@@ -7,6 +7,8 @@ from .base import random_username, submit_login
 
 CHECK = "enumeration"
 ORDER = 70
+CWE = "CWE-204"
+OWASP = "A07:2021 Identification and Authentication Failures"
 
 LEN_DIFF_RATIO = 0.15
 TIME_DIFF_SECONDS = 0.5

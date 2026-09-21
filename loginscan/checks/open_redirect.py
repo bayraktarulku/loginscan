@@ -12,6 +12,8 @@ from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "open_redirect"
 ORDER = 60
+CWE = "CWE-601"
+OWASP = "A01:2021 Broken Access Control"
 
 REDIRECT_PARAMS = ["next", "redirect", "redirect_uri", "returnUrl", "return_to",
                    "url", "dest", "continue"]

@@ -6,6 +6,8 @@ from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "cors"
 ORDER = 30
+CWE = "CWE-942"
+OWASP = "A05:2021 Security Misconfiguration"
 
 EVIL_ORIGIN = "https://loginscan-evil.example"
 

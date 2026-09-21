@@ -9,6 +9,8 @@ from .base import baseline_fail
 
 CHECK = "cookies"
 ORDER = 90
+CWE = "CWE-1004"
+OWASP = "A05:2021 Security Misconfiguration"
 
 
 def _parse_flags(raw: str) -> dict:

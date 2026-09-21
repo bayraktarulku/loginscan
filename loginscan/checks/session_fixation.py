@@ -12,6 +12,8 @@ from .base import baseline_fail, looks_like_success, submit_login
 
 CHECK = "session_fixation"
 ORDER = 110
+CWE = "CWE-384"
+OWASP = "A07:2021 Identification and Authentication Failures"
 
 
 def _snapshot(ctx: CheckContext) -> dict[str, str]:

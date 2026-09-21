@@ -1,22 +1,43 @@
-"""Static knowledge: maps each check to CWE and OWASP Top 10 (2021) references."""
+"""CWE / OWASP references, sourced from each check (single source of truth).
+
+Every check module may declare `CWE` and `OWASP` constants; this module collects
+them so reports (text/JSON/HTML/SARIF) can annotate findings. Plugins that declare
+the same constants are picked up too.
+"""
 from __future__ import annotations
 
-CHECK_META: dict[str, dict[str, str]] = {
-    "sqli": {"cwe": "CWE-89", "owasp": "A03:2021 Injection"},
-    "enumeration": {"cwe": "CWE-204", "owasp": "A07:2021 Identification and Authentication Failures"},
-    "ratelimit": {"cwe": "CWE-307", "owasp": "A07:2021 Identification and Authentication Failures"},
-    "cookies": {"cwe": "CWE-1004", "owasp": "A05:2021 Security Misconfiguration"},
-    "session": {"cwe": "CWE-330", "owasp": "A07:2021 Identification and Authentication Failures"},
-    "session_fixation": {"cwe": "CWE-384", "owasp": "A07:2021 Identification and Authentication Failures"},
-    "csrf": {"cwe": "CWE-352", "owasp": "A01:2021 Broken Access Control"},
-    "jwt": {"cwe": "CWE-347", "owasp": "A02:2021 Cryptographic Failures"},
-    "open_redirect": {"cwe": "CWE-601", "owasp": "A01:2021 Broken Access Control"},
-    "verb": {"cwe": "CWE-650", "owasp": "A05:2021 Security Misconfiguration"},
-    "cors": {"cwe": "CWE-942", "owasp": "A05:2021 Security Misconfiguration"},
-    "cache": {"cwe": "CWE-525", "owasp": "A05:2021 Security Misconfiguration"},
-    "headers": {"cwe": "CWE-693", "owasp": "A05:2021 Security Misconfiguration"},
-}
+from .checks import ALL_CHECKS
+
+
+def _collect() -> dict[str, dict[str, str]]:
+    out: dict[str, dict[str, str]] = {}
+    for mod in ALL_CHECKS:
+        name = getattr(mod, "CHECK", None)
+        if not name:
+            continue
+        entry: dict[str, str] = {}
+        if getattr(mod, "CWE", None):
+            entry["cwe"] = mod.CWE
+        if getattr(mod, "OWASP", None):
+            entry["owasp"] = mod.OWASP
+        out[name] = entry
+    return out
+
+
+CHECK_META = _collect()
 
 
 def meta_for(check: str) -> dict[str, str]:
-    return CHECK_META.get(check, {})
+    if check in CHECK_META:
+        return CHECK_META[check]
+    # Fall back to a plugin's own constants if it isn't a built-in.
+    from .registry import all_checks
+    for mod in all_checks():
+        if getattr(mod, "CHECK", None) == check:
+            entry = {}
+            if getattr(mod, "CWE", None):
+                entry["cwe"] = mod.CWE
+            if getattr(mod, "OWASP", None):
+                entry["owasp"] = mod.OWASP
+            return entry
+    return {}
