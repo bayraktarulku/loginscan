@@ -5,12 +5,16 @@ All notable changes to loginscan are documented here. The format follows
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+## [1.2.0] - 2026-09-21
 ### Added
 - Ruff + mypy configuration; the codebase is lint- and type-clean.
 - Pre-commit hooks (ruff, mypy) and a CI lint/type-check job with coverage.
 - Docs site (mkdocs-material), CONTRIBUTING / SECURITY / CODE_OF_CONDUCT, issue & PR templates.
 - Observability & robustness: structured logging (`-v/-vv/--quiet`), transient-failure
   retries with backoff, `--header`/`--bearer`, `--proxy`, host scope-guard, and JUnit XML output.
+- Stateful `session_fixation` check (needs `--password` for your own test account): flags a
+  session id that is not rotated on login.
 
 ## [1.1.0] - 2026-09-21
 ### Added

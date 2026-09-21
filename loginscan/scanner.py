@@ -32,7 +32,8 @@ class Scanner:
         cfg = self.config
         client = HttpClient(
             cfg.max_requests, cfg.delay, cfg.timeout, cfg.verify_tls,
-            use_cookies=bool(cfg.csrf_field), default_headers=cfg.extra_headers,
+            use_cookies=bool(cfg.csrf_field) or bool(cfg.password),
+            default_headers=cfg.extra_headers,
             proxy=cfg.proxy, retries=cfg.retries,
             allowed_hosts=_hosts(cfg) if cfg.scope_guard else None,
         )

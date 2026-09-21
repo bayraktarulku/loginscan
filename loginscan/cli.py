@@ -30,6 +30,9 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Assert you are authorized to test the target (required).")
     p.add_argument("--user", dest="known_username", default=None,
                    help="A username that really exists on your system (not the password).")
+    p.add_argument("--password", default=None,
+                   help="YOUR OWN test-account password; enables stateful checks (session fixation).")
+    p.add_argument("--logout-url", default=None, help="Logout endpoint (for the logout check).")
     p.add_argument("--method", default=None, help="Login HTTP method (default POST).")
     p.add_argument("--json-body", action="store_true",
                    help="Send credentials as JSON instead of form-encoded.")
@@ -136,6 +139,8 @@ def _build_config(args, conf) -> ScanConfig:
         cfg.csrf_url = pick(args.csrf_url, "csrf_url") or cfg.csrf_url or cfg.login_page_url or cfg.url
 
     cfg.known_username = pick(args.known_username, "user")
+    cfg.password = pick(args.password, "password")
+    cfg.logout_url = pick(args.logout_url, "logout_url")
     cfg.success_indicators = args.success_indicators or conf.get("success", [])
     fields = _parse_fields(args.extra_fields) if args.extra_fields else conf.get("fields", {})
     cfg.extra_fields = dict(fields)

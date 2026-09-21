@@ -82,6 +82,7 @@ Useful options:
 |---|---|
 | `--i-own-this` | **Required.** Asserts you are authorized to test the target. |
 | `--user NAME` | A username that really exists (not the password). Strengthens the enumeration check. |
+| `--password PW` | Your own test-account password; enables stateful checks (session fixation). |
 | `--success "text"` | Text that means "login succeeded". Repeatable. |
 | `--json-body` | Send credentials as JSON instead of form-encoded. |
 | `--username-field` / `--password-field` | Override field names. |
@@ -120,6 +121,7 @@ print(report.to_json())
 | `ratelimit` | Whether repeated failed logins get blocked — sequentially **and** in a concurrent burst (catches race-condition bypasses) |
 | `cookies` | Session cookie HttpOnly / Secure / SameSite flags |
 | `session` | Predictable session tokens (short / numeric / sequential / low-entropy) |
+| `session_fixation` | Session id not rotated on login (stateful; needs `--password`) |
 | `csrf` | CSRF token / cookie / SameSite defense on the login page |
 | `open_redirect` | Unvalidated redirect via `?next=`, `?returnUrl=`, etc. |
 | `jwt` | Passive JWT weaknesses (`alg=none`, missing `exp`) |

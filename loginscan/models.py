@@ -59,6 +59,8 @@ class ScanConfig:
     username_field: str = "username"
     password_field: str = "password"
     known_username: str | None = None
+    password: str | None = None        # YOUR OWN test-account password, for stateful flow checks
+    logout_url: str | None = None      # optional logout endpoint for the logout check
     success_indicators: list[str] = field(default_factory=list)
     login_page_url: str | None = None
     csrf_field: str | None = None   # hidden form field carrying a CSRF token

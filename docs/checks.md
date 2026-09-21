@@ -1,6 +1,6 @@
 # Checks
 
-loginscan ships 12 built-in checks. Each finding carries a severity, a **CWE** and an
+loginscan ships 13 built-in checks. Each finding carries a severity, a **CWE** and an
 **OWASP Top 10 (2021)** reference, and a remediation.
 
 | Check | What it looks for | CWE |
@@ -10,6 +10,7 @@ loginscan ships 12 built-in checks. Each finding carries a severity, a **CWE** a
 | `ratelimit` | Blocking of repeated failed logins — sequential **and** concurrent burst (race) | CWE-307 |
 | `cookies` | Session cookie HttpOnly / Secure / SameSite flags | CWE-1004 |
 | `session` | Predictable session tokens (short / numeric / sequential / low-entropy) | CWE-330 |
+| `session_fixation` | Session id not rotated on login (stateful; needs `--password`) | CWE-384 |
 | `csrf` | CSRF token / cookie / SameSite defense on the login page | CWE-352 |
 | `jwt` | Passive JWT weaknesses (`alg=none`, missing `exp`) | CWE-347 |
 | `open_redirect` | Unvalidated redirect via `?next=`, `?returnUrl=`, … | CWE-601 |

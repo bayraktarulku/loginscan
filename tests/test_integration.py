@@ -1,7 +1,62 @@
 """End-to-end scans against the vulnerable and secure demo servers."""
+import http.server
+import threading
+import urllib.parse
+
 from loginscan import ScanConfig, Scanner, Status
 from loginscan.discovery import from_site
 from loginscan.http import HttpClient
+
+
+def _make_stateful_handler(rotate: bool):
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Set-Cookie", "session=PRESET; Path=/")
+            self.end_headers()
+            self.wfile.write(b"<form>login</form>")
+
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", 0))
+            data = urllib.parse.parse_qs(self.rfile.read(length).decode())
+            ok = data.get("username", [""])[0] == "admin" and data.get("password", [""])[0] == "pw"
+            self.send_response(200 if ok else 401)
+            if ok and rotate:
+                self.send_header("Set-Cookie", "session=ROTATED; Path=/")
+            self.end_headers()
+            self.wfile.write(b"Welcome admin" if ok else b"nope")
+
+    return Handler
+
+
+def _serve_handler(handler):
+    httpd = http.server.HTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    return httpd, f"http://127.0.0.1:{httpd.server_address[1]}/"
+
+
+def _fixation_report(rotate: bool):
+    httpd, url = _serve_handler(_make_stateful_handler(rotate))
+    try:
+        cfg = ScanConfig(url=url, known_username="admin", password="pw",
+                         success_indicators=["Welcome"], delay=0.0)
+        return Scanner(cfg, authorized=True, only=["session_fixation"]).run()
+    finally:
+        httpd.shutdown()
+
+
+def test_session_fixation_detected():
+    report = _fixation_report(rotate=False)
+    assert "session_fixation" in {f.check for f in report.vulnerabilities}
+
+
+def test_session_rotation_passes():
+    report = _fixation_report(rotate=True)
+    sf = [f for f in report.findings if f.check == "session_fixation"][0]
+    assert sf.status == Status.OK
 
 
 def _scan(url, **kw):
