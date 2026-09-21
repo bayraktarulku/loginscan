@@ -73,6 +73,7 @@ Useful options:
 | `--max-requests 25` | Total request budget. |
 | `--json report.json` | Also write the report as JSON. |
 | `--html report.html` | Also write a shareable, styled HTML report. |
+| `--sarif report.sarif` | Also write SARIF 2.1.0 for GitHub code scanning / CI. |
 | `--insecure` | Disable TLS verification (for your own test server). |
 
 Exit code: `1` if any vulnerability is found, `0` if clean, `2` if unauthorized/misused (handy for CI).
@@ -119,6 +120,39 @@ python3 secure_app.py         # port 8002
 loginscan --site http://127.0.0.1:8002/ --i-own-this --user admin --success "Giriş başarılı"
 #   -> sqli / enumeration / rate-limit all OK
 ```
+
+## Security score
+
+Every report includes a **0–100 score and a letter grade** (A–F) derived from the
+findings' severities, plus a **CWE** and **OWASP Top 10** reference per finding (in the
+text, JSON, HTML and SARIF output).
+
+## GitHub Action / CI
+
+Scan a staging deployment on every push and upload results to GitHub code scanning:
+
+```yaml
+# .github/workflows/loginscan.yml
+name: loginscan
+on: [push]
+permissions:
+  security-events: write   # to upload SARIF
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bayraktarulku/loginscan@v1
+        with:
+          site: https://staging.example.com/login
+          user: alice
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: loginscan.sarif
+```
+
+Using the action asserts you are authorized to test the target. It fails the job when a
+vulnerability is found (`fail-on-vuln: false` to only report).
 
 ## Releasing to PyPI
 

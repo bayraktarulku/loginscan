@@ -1,0 +1,62 @@
+name: "loginscan"
+description: "Defensive login-endpoint security scan (authorized use only)."
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  target:
+    description: "Login endpoint URL"
+    required: false
+  site:
+    description: "Web page URL; login form is auto-discovered"
+    required: false
+  swagger:
+    description: "OpenAPI/Swagger JSON URL or file"
+    required: false
+  user:
+    description: "A username that really exists (strengthens enumeration check)"
+    required: false
+  args:
+    description: "Extra loginscan CLI arguments"
+    required: false
+    default: ""
+  sarif-file:
+    description: "Where to write SARIF output"
+    required: false
+    default: "loginscan.sarif"
+  fail-on-vuln:
+    description: "Fail the job if a vulnerability is found"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - shell: bash
+      run: pip install loginscan
+    - shell: bash
+      env:
+        TARGET: ${{ inputs.target }}
+        SITE: ${{ inputs.site }}
+        SWAGGER: ${{ inputs.swagger }}
+        USER_ARG: ${{ inputs.user }}
+        EXTRA: ${{ inputs.args }}
+        SARIF: ${{ inputs.sarif-file }}
+        FAIL: ${{ inputs.fail-on-vuln }}
+      run: |
+        CMD=(loginscan --i-own-this --sarif "$SARIF")
+        [ -n "$TARGET" ] && CMD+=("$TARGET")
+        [ -n "$SITE" ] && CMD+=(--site "$SITE")
+        [ -n "$SWAGGER" ] && CMD+=(--swagger "$SWAGGER")
+        [ -n "$USER_ARG" ] && CMD+=(--user "$USER_ARG")
+        [ -n "$EXTRA" ] && CMD+=($EXTRA)
+        echo "Running: ${CMD[*]}"
+        "${CMD[@]}"; code=$?
+        if [ "$FAIL" = "true" ] && [ "$code" -eq 1 ]; then
+          echo "::error::loginscan found vulnerabilities"; exit 1
+        fi
+        exit 0

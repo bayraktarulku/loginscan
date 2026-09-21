@@ -52,6 +52,8 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Also write the report as JSON to this file.")
     p.add_argument("--html", dest="html_path", default=None, metavar="FILE",
                    help="Also write the report as a shareable HTML page.")
+    p.add_argument("--sarif", dest="sarif_path", default=None, metavar="FILE",
+                   help="Also write SARIF 2.1.0 (for GitHub code scanning / CI).")
     p.add_argument("--version", action="version", version=f"loginscan {__version__}")
     return p
 
@@ -131,6 +133,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         with open(args.html_path, "w", encoding="utf-8") as fh:
             fh.write(report.to_html())
         print(f"HTML report written: {args.html_path}")
+    if args.sarif_path:
+        from .sarif import report_to_sarif_json
+        with open(args.sarif_path, "w", encoding="utf-8") as fh:
+            fh.write(report_to_sarif_json(report, __version__))
+        print(f"SARIF report written: {args.sarif_path}")
 
     return 1 if any(f.status == Status.VULNERABLE for f in report.findings) else 0
 

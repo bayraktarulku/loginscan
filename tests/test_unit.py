@@ -58,6 +58,31 @@ def test_report_tracks_vulnerabilities():
     assert json.loads(rep.to_json())["summary"]["vulnerable"] == 1
 
 
+def test_score_and_grade():
+    from loginscan.score import score_findings
+    clean = score_findings([Finding("a", Status.OK, Severity.INFO, "t", "d")])
+    assert clean["score"] == 100 and clean["grade"] == "A"
+    bad = score_findings([Finding("sqli", Status.VULNERABLE, Severity.CRITICAL, "t", "d")])
+    assert bad["score"] == 55 and bad["grade"] == "D"
+    worst = score_findings([Finding(c, Status.VULNERABLE, Severity.CRITICAL, "t", "d")
+                            for c in ("a", "b", "c")])
+    assert worst["score"] == 0 and worst["grade"] == "F"
+
+
+def test_sarif_export():
+    from loginscan.sarif import report_to_sarif
+    rep = Report("http://x/login")
+    rep.add(Finding("sqli", Status.VULNERABLE, Severity.CRITICAL, "SQLi", "d"))
+    rep.add(Finding("headers", Status.OK, Severity.INFO, "ok", "d"))
+    doc = report_to_sarif(rep, "0.2.0")
+    run = doc["runs"][0]
+    assert run["tool"]["driver"]["name"] == "loginscan"
+    assert len(run["results"]) == 1  # only the vulnerable one
+    assert run["results"][0]["ruleId"] == "sqli"
+    assert run["results"][0]["level"] == "error"
+    assert run["results"][0]["properties"]["cwe"] == "CWE-89"
+
+
 def test_report_html_escapes_and_renders():
     rep = Report("http://x/")
     rep.add(Finding("a", Status.VULNERABLE, Severity.HIGH, "<script>", "d & d"))

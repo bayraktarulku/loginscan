@@ -6,7 +6,9 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from .knowledge import meta_for
 from .models import Finding, Severity, Status
+from .score import score_findings
 
 _SEV_LABEL = {
     Severity.CRITICAL: "CRIT",
@@ -55,15 +57,26 @@ class Report:
                            Severity.ORDER.get(f.severity, 9)),
         )
 
+    def score(self) -> Dict[str, Any]:
+        return score_findings(self.findings)
+
     def to_dict(self) -> Dict[str, Any]:
+        findings = []
+        for f in self.sorted_findings():
+            d = f.to_dict()
+            d.update(meta_for(f.check))
+            findings.append(d)
+        s = self.score()
         return {
             "target": self.target,
             "summary": {
+                "score": s["score"],
+                "grade": s["grade"],
                 "total": len(self.findings),
                 "vulnerable": len(self.vulnerabilities),
                 "warnings": len(self.warnings),
             },
-            "findings": [f.to_dict() for f in self.sorted_findings()],
+            "findings": findings,
         }
 
     def to_json(self, indent: int = 2) -> str:
@@ -75,8 +88,10 @@ class Report:
         lines.append(bar)
         lines.append(f" loginscan report - target: {self.target}")
         lines.append(bar)
+        s = self.score()
         v, w = len(self.vulnerabilities), len(self.warnings)
-        lines.append(f" Findings: {len(self.findings)} | Vulnerable: {v} | Warnings: {w}")
+        lines.append(f" Score: {s['score']}/100 ({s['grade']})   "
+                     f"Findings: {len(self.findings)} | Vulnerable: {v} | Warnings: {w}")
         lines.append("")
         for f in self.sorted_findings():
             mark = _STATUS_MARK.get(f.status, "[?]")
@@ -112,6 +127,9 @@ class Report:
             ev_html = f"<ul class='ev'>{ev}</ul>" if ev else ""
             fix = (f"<p class='fix'><b>Fix:</b> {esc(f.remediation)}</p>"
                    if f.status in (Status.VULNERABLE, Status.WARNING) and f.remediation else "")
+            m = meta_for(f.check)
+            ref = (f"<span class='ref'>{esc(m.get('cwe', ''))} · {esc(m.get('owasp', ''))}</span>"
+                   if m else "")
             cards.append(f"""
       <div class="card" style="background:{status_bg.get(f.status, '#fff')}">
         <div class="row">
@@ -120,9 +138,10 @@ class Report:
           <span class="check">{esc(f.check)}</span>
         </div>
         <p class="detail">{esc(f.detail)}</p>
-        {fix}{ev_html}
+        {fix}{ev_html}{ref}
       </div>""")
 
+        s = self.score()
         v, w = len(self.vulnerabilities), len(self.warnings)
         return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -147,12 +166,15 @@ class Report:
   .detail {{ margin: .5rem 0 .25rem; }}
   .fix {{ margin: .25rem 0; }}
   .ev {{ margin: .25rem 0 0; color: #555; font-size: 13px; }}
+  .ref {{ display: inline-block; margin-top: .4rem; color: #777; font-size: 12px; font-family: monospace; }}
+  .score {{ font-size: 2rem; font-weight: 800; }}
   footer {{ margin-top: 2rem; color: #999; font-size: 13px; }}
 </style></head>
 <body>
   <h1>loginscan report</h1>
   <div class="target">{esc(self.target)}</div>
   <div class="summary">
+    <span class="score">{s['score']}/100 · {s['grade']}</span>
     <span class="pill t">{len(self.findings)} findings</span>
     <span class="pill v">{v} vulnerable</span>
     <span class="pill w">{w} warnings</span>
