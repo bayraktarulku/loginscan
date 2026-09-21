@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "loginscan"
-version = "1.0.0"
+version = "1.1.0"
 description = "Defensive, dependency-free security scanner for your own login endpoints."
 readme = "README.md"
 requires-python = ">=3.9"

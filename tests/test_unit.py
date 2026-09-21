@@ -45,6 +45,31 @@ def test_plugin_checks_merged(monkeypatch):
     assert "myplugin" in registry.check_names(registry.all_checks())
 
 
+class _FakeBurstClient:
+    def __init__(self, responses):
+        self._responses = responses
+        self.remaining = 20
+
+    def burst(self, method, url, data, n, content_type="form"):
+        return self._responses[:n]
+
+
+def test_concurrent_ratelimit_race_detected():
+    from loginscan.checks.ratelimit import _concurrent_probe
+    from loginscan.http import Response
+    from loginscan.models import ScanConfig
+
+    cfg = ScanConfig(url="http://x/")
+    all_pass = [Response(401, {}, [], "", 0.0, "u") for _ in range(8)]
+    race = _concurrent_probe(_FakeBurstClient(all_pass), cfg, limit=5, wrong_pw="x")
+    assert race.status == Status.VULNERABLE and "concurrent" in race.title.lower()
+
+    some_blocked = [Response(429, {}, [], "", 0.0, "u")] + \
+        [Response(401, {}, [], "", 0.0, "u") for _ in range(7)]
+    ok = _concurrent_probe(_FakeBurstClient(some_blocked), cfg, limit=5, wrong_pw="x")
+    assert ok.status == Status.OK
+
+
 def test_input_value_extraction():
     from loginscan.checks.base import _input_value
     html = '<input type="hidden" name="csrf" value="abc123"><input name="username">'

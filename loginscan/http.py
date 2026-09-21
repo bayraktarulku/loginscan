@@ -9,6 +9,7 @@ import http.cookiejar
 import json
 import re
 import ssl
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -51,6 +52,7 @@ class HttpClient:
         self.count = 0
         self.observed_session_tokens: List[Tuple[str, str]] = []
         self.csrf_token: Optional[str] = None  # cached per scan when CSRF mode is on
+        self._lock = threading.Lock()
         self._ctx = ssl.create_default_context()
         if not verify_tls:
             self._ctx.check_hostname = False
@@ -61,6 +63,9 @@ class HttpClient:
             # cookie, then submit the matching token).
             handlers.append(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         self._opener = urllib.request.build_opener(*handlers)
+        # A cookie-less opener for concurrent bursts (CookieJar is not thread-safe).
+        self._burst_opener = urllib.request.build_opener(
+            _NoRedirect, urllib.request.HTTPSHandler(context=self._ctx))
 
     @property
     def remaining(self) -> int:
@@ -102,7 +107,7 @@ class HttpClient:
         except urllib.error.HTTPError as e:
             return self._to_response(e, start, url)
 
-    def _to_response(self, resp, start: float, url: str) -> Response:
+    def _to_response(self, resp, start: float, url: str, observe: bool = True) -> Response:
         raw = resp.read() if hasattr(resp, "read") else b""
         text = raw.decode("utf-8", errors="replace")
         headers = {}
@@ -119,12 +124,13 @@ class HttpClient:
         except Exception:
             pass
 
-        for cookie in set_cookies:
-            nv = cookie.split(";", 1)[0]
-            if "=" in nv:
-                name, value = (p.strip() for p in nv.split("=", 1))
-                if value and _SESSION_COOKIE_HINT.search(name):
-                    self.observed_session_tokens.append((name, value))
+        if observe:
+            for cookie in set_cookies:
+                nv = cookie.split(";", 1)[0]
+                if "=" in nv:
+                    name, value = (p.strip() for p in nv.split("=", 1))
+                    if value and _SESSION_COOKIE_HINT.search(name):
+                        self.observed_session_tokens.append((name, value))
 
         return Response(
             status=getattr(resp, "status", getattr(resp, "code", 0)) or 0,
@@ -141,3 +147,48 @@ class HttpClient:
 
     def get(self, url: str, headers: Optional[Dict[str, str]] = None) -> Response:
         return self.request("GET", url, data=None, headers=headers)
+
+    def burst(self, method: str, url: str, data: Dict[str, str], n: int,
+              content_type: str = "form") -> List[Response]:
+        """Fire n identical requests concurrently (no delay) to probe race-y limits.
+
+        Costs n from the request budget. Uses a cookie-less opener and does not
+        record session tokens, so it is safe to run across threads.
+        """
+        with self._lock:
+            if self.count + n > self.max_requests:
+                raise RequestBudgetExceeded(
+                    f"Request budget too low for a burst of {n} ({self.remaining} left)."
+                )
+            self.count += n
+
+        if content_type == "json":
+            body = json.dumps(data).encode()
+            ctype = "application/json"
+        else:
+            body = urllib.parse.urlencode(data).encode()
+            ctype = "application/x-www-form-urlencoded"
+        headers = {"User-Agent": "loginscan (self-audit)", "Content-Type": ctype}
+
+        results: List[Response] = []
+        barrier = threading.Barrier(n)
+
+        def worker():
+            req = urllib.request.Request(url, data=body, method=method.upper(), headers=headers)
+            barrier.wait()  # release all threads at the same instant
+            start = time.time()
+            try:
+                with self._burst_opener.open(req, timeout=self.timeout) as resp:
+                    r = self._to_response(resp, start, url, observe=False)
+            except urllib.error.HTTPError as e:
+                r = self._to_response(e, start, url, observe=False)
+            except Exception:  # noqa: BLE001 - a failed thread just yields no result
+                return
+            results.append(r)  # list.append is atomic under CPython's GIL
+
+        threads = [threading.Thread(target=worker) for _ in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        return results

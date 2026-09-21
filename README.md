@@ -108,7 +108,7 @@ print(report.to_json())
 |---|---|
 | `sqli` | SQL-injection auth bypass + database error leakage |
 | `enumeration` | Different responses for existing vs unknown users |
-| `ratelimit` | Whether repeated failed logins get blocked |
+| `ratelimit` | Whether repeated failed logins get blocked — sequentially **and** in a concurrent burst (catches race-condition bypasses) |
 | `cookies` | Session cookie HttpOnly / Secure / SameSite flags |
 | `session` | Predictable session tokens (short / numeric / sequential / low-entropy) |
 | `csrf` | CSRF token / cookie / SameSite defense on the login page |
