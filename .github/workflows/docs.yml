@@ -27,8 +27,9 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
-      # Deploy only works once Pages is enabled (Settings > Pages > Source:
-      # GitHub Actions). Until then this step is tolerated so CI stays green.
+      # Deploy is skipped until you opt in: enable Pages (Settings > Pages >
+      # Source: GitHub Actions) AND add an Actions variable ENABLE_PAGES=true.
+      # This keeps the run green with no errors until the site is ready to publish.
       - id: deploy
-        continue-on-error: true
+        if: vars.ENABLE_PAGES == 'true'
         uses: actions/deploy-pages@v4
