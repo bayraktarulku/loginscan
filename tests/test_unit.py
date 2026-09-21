@@ -133,16 +133,21 @@ def test_authorization_gate():
     ensure_authorized(True)
 
 
+def _ctx_with_tokens(tokens=()):
+    from loginscan.context import CheckContext, SessionObserver
+    obs = SessionObserver()
+    obs.tokens = list(tokens)
+    return CheckContext(HttpClient(10, 0, 5, True), obs)
+
+
 def test_session_sequential_is_vulnerable():
-    client = HttpClient(10, 0, 5, True)
-    client.observed_session_tokens = [("session", "1006"), ("session", "1007")]
-    findings = session_check.run(client, ScanConfig(url="http://x/"))
+    ctx = _ctx_with_tokens([("session", "1006"), ("session", "1007")])
+    findings = session_check.run(ctx, ScanConfig(url="http://x/"))
     assert findings[0].status == Status.VULNERABLE
 
 
 def test_session_none_is_skipped():
-    client = HttpClient(10, 0, 5, True)
-    findings = session_check.run(client, ScanConfig(url="http://x/"))
+    findings = session_check.run(_ctx_with_tokens(), ScanConfig(url="http://x/"))
     assert findings[0].status == Status.SKIPPED
 
 
@@ -226,9 +231,8 @@ def _b64url(obj):
 
 def test_jwt_alg_none_is_vulnerable():
     token = f"{_b64url({'alg': 'none'})}.{_b64url({'sub': 'admin'})}."
-    client = HttpClient(10, 0, 5, True)
-    client.observed_session_tokens = [("token", token)]
-    findings = jwt_check.run(client, ScanConfig(url="http://x/"))
+    ctx = _ctx_with_tokens([("token", token)])
+    findings = jwt_check.run(ctx, ScanConfig(url="http://x/"))
     assert any(f.status == Status.VULNERABLE for f in findings)
     assert any("exp" in f.title for f in findings)
 

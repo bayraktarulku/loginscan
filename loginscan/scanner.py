@@ -5,6 +5,7 @@ import logging
 from urllib.parse import urlparse
 
 from .authorization import ensure_authorized
+from .context import CheckContext, SessionObserver
 from .http import HttpClient, RequestBudgetExceeded
 from .models import Finding, ScanConfig, Severity, Status
 from .registry import all_checks, select
@@ -30,20 +31,21 @@ class Scanner:
     def run(self) -> Report:
         ensure_authorized(self.authorized)
         cfg = self.config
-        client = HttpClient(
+        http = HttpClient(
             cfg.max_requests, cfg.delay, cfg.timeout, cfg.verify_tls,
             use_cookies=bool(cfg.csrf_field) or bool(cfg.password),
             default_headers=cfg.extra_headers,
             proxy=cfg.proxy, retries=cfg.retries,
             allowed_hosts=_hosts(cfg) if cfg.scope_guard else None,
         )
+        ctx = CheckContext(http, SessionObserver())
         report = Report(target=cfg.url)
 
         for module in self.checks:
             name = getattr(module, "CHECK", module.__name__)
             log.info("running check: %s", name)
             try:
-                findings: list[Finding] = module.run(client, cfg)
+                findings: list[Finding] = module.run(ctx, cfg)
                 report.extend(findings)
             except RequestBudgetExceeded:
                 report.add(Finding(

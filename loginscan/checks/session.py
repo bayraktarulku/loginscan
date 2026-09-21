@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 from collections import Counter
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "session"
@@ -21,8 +21,8 @@ def _entropy_bits(s: str) -> float:
     return per_char * n
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
-    tokens = [v for _, v in client.observed_session_tokens]
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
+    tokens = [v for _, v in ctx.session_tokens()]
     if not tokens:
         return [Finding(
             check=CHECK, status=Status.SKIPPED, severity=Severity.INFO,

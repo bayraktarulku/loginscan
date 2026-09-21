@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail
 
@@ -21,8 +21,8 @@ def _parse_flags(raw: str) -> dict:
     }
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
-    resp = baseline_fail(client, cfg)
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
+    resp = baseline_fail(ctx, cfg)
     is_https = urlparse(cfg.url).scheme == "https"
 
     if not resp.set_cookies:

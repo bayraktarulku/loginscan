@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from urllib.parse import urlencode, urlparse, urlsplit, urlunsplit
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "open_redirect"
@@ -23,15 +23,15 @@ def _with_query(base_url: str, param: str, value: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, query, ""))
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
     base = cfg.login_page_url or cfg.url
     sentinel_host = urlparse(SENTINEL).netloc
 
     for param in REDIRECT_PARAMS:
-        if client.remaining <= 0:
+        if ctx.remaining <= 0:
             break
         try:
-            resp = client.get(_with_query(base, param, SENTINEL))
+            resp = ctx.get(_with_query(base, param, SENTINEL))
         except Exception:  # noqa: BLE001
             continue
         location = resp.header("location") or ""

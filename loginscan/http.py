@@ -8,7 +8,6 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import logging
-import re
 import ssl
 import threading
 import time
@@ -18,7 +17,6 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
-_SESSION_COOKIE_HINT = re.compile(r"sess|token|auth|sid|jwt|login", re.I)
 log = logging.getLogger("loginscan.http")
 
 
@@ -61,8 +59,6 @@ class HttpClient:
         self.count = 0
         self.default_headers = default_headers or {}
         self.allowed_hosts = allowed_hosts or set()
-        self.observed_session_tokens: list[tuple[str, str]] = []
-        self.csrf_token: str | None = None  # cached per scan when CSRF mode is on
         self._lock = threading.Lock()
         self._ctx = ssl.create_default_context()
         if not verify_tls:
@@ -143,7 +139,7 @@ class HttpClient:
                     time.sleep(backoff)
         raise urllib.error.URLError(f"request failed after {self.retries} retries: {last_err}")
 
-    def _to_response(self, resp, start: float, url: str, observe: bool = True) -> Response:
+    def _to_response(self, resp, start: float, url: str) -> Response:
         raw = resp.read() if hasattr(resp, "read") else b""
         text = raw.decode("utf-8", errors="replace")
         headers = {}
@@ -159,14 +155,6 @@ class HttpClient:
                 set_cookies = list(all_cookies)
         except Exception:
             pass
-
-        if observe:
-            for cookie in set_cookies:
-                nv = cookie.split(";", 1)[0]
-                if "=" in nv:
-                    name, value = (p.strip() for p in nv.split("=", 1))
-                    if value and _SESSION_COOKIE_HINT.search(name):
-                        self.observed_session_tokens.append((name, value))
 
         return Response(
             status=getattr(resp, "status", getattr(resp, "code", 0)) or 0,
@@ -215,9 +203,9 @@ class HttpClient:
             start = time.time()
             try:
                 with self._burst_opener.open(req, timeout=self.timeout) as resp:
-                    r = self._to_response(resp, start, url, observe=False)
+                    r = self._to_response(resp, start, url)
             except urllib.error.HTTPError as e:
-                r = self._to_response(e, start, url, observe=False)
+                r = self._to_response(e, start, url)
             except Exception:  # noqa: BLE001 - a failed thread just yields no result
                 return
             results.append(r)  # list.append is atomic under CPython's GIL

@@ -1,4 +1,4 @@
-"""Check modules. Each exposes run(client, cfg) -> List[Finding]."""
+"""Check modules. Each exposes run(ctx, cfg) -> List[Finding]."""
 from . import (
     cache,
     cookies,

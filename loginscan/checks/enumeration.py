@@ -1,7 +1,7 @@
 """User enumeration detection: does the server treat existing vs unknown users differently?"""
 from __future__ import annotations
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import random_username, submit_login
 
@@ -15,12 +15,12 @@ def _norm_body(text: str) -> str:
     return " ".join(text.split())[:400].lower()
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
     wrong_pw = "wrong-Password-123"
-    r_absent = submit_login(client, cfg, random_username("ghost"), wrong_pw)
+    r_absent = submit_login(ctx, cfg, random_username("ghost"), wrong_pw)
 
     if not cfg.known_username:
-        r_absent2 = submit_login(client, cfg, random_username("ghost2"), wrong_pw)
+        r_absent2 = submit_login(ctx, cfg, random_username("ghost2"), wrong_pw)
         consistent = _norm_body(r_absent.body) == _norm_body(r_absent2.body)
         return [Finding(
             check=CHECK, status=Status.SKIPPED, severity=Severity.INFO,
@@ -31,7 +31,7 @@ def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
             remediation="Re-run with --user / known_username.",
         )]
 
-    r_present = submit_login(client, cfg, cfg.known_username, wrong_pw)
+    r_present = submit_login(ctx, cfg, cfg.known_username, wrong_pw)
 
     if 429 in (r_present.status, r_absent.status):
         return [Finding(

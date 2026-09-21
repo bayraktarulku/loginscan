@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "csrf"
@@ -18,8 +18,8 @@ _META_TOKEN = re.compile(r'<meta[^>]+name=["\'](?:csrf|xsrf)[-_]?token["\']', re
 _CSRF_COOKIE = re.compile(r"csrf|xsrf", re.I)
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
-    page = client.get(cfg.login_page_url or cfg.url)
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
+    page = ctx.get(cfg.login_page_url or cfg.url)
     body = page.body
 
     has_token = bool(_TOKEN_INPUT.search(body) or _META_TOKEN.search(body))

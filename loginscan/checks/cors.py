@@ -1,7 +1,7 @@
 """CORS misconfiguration check on the auth endpoint."""
 from __future__ import annotations
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "cors"
@@ -9,8 +9,8 @@ CHECK = "cors"
 EVIL_ORIGIN = "https://loginscan-evil.example"
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
-    resp = client.get(cfg.login_page_url or cfg.url, headers={"Origin": EVIL_ORIGIN})
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
+    resp = ctx.get(cfg.login_page_url or cfg.url, headers={"Origin": EVIL_ORIGIN})
     acao = resp.header("access-control-allow-origin")
     acac = (resp.header("access-control-allow-credentials") or "").lower() == "true"
 

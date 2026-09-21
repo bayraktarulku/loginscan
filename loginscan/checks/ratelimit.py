@@ -6,7 +6,8 @@ let a simultaneous burst slip through (a TOCTOU race).
 """
 from __future__ import annotations
 
-from ..http import HttpClient, RequestBudgetExceeded
+from ..context import CheckContext
+from ..http import RequestBudgetExceeded
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import build_data, random_username, submit_login
 
@@ -21,7 +22,7 @@ def _blocked(resp) -> bool:
     return resp.status in BLOCK_STATUSES or any(h in low for h in BLOCK_HINTS)
 
 
-def run(client: HttpClient, cfg: ScanConfig, attempts: int = 6) -> list[Finding]:
+def run(ctx: CheckContext, cfg: ScanConfig, attempts: int = 6) -> list[Finding]:
     target_user = cfg.known_username or random_username("probe")
     wrong_pw = "definitely-wrong-pw"
 
@@ -29,9 +30,9 @@ def run(client: HttpClient, cfg: ScanConfig, attempts: int = 6) -> list[Finding]
     blocked_at = None
     try:
         for i in range(1, attempts + 1):
-            if client.remaining <= 0:
+            if ctx.remaining <= 0:
                 break
-            resp = submit_login(client, cfg, target_user, wrong_pw)
+            resp = submit_login(ctx, cfg, target_user, wrong_pw)
             statuses.append(resp.status)
             if _blocked(resp):
                 blocked_at = i
@@ -58,14 +59,14 @@ def run(client: HttpClient, cfg: ScanConfig, attempts: int = 6) -> list[Finding]
         detail=f"Server blocked at attempt {blocked_at}.",
         evidence={"statuses": statuses},
     )]
-    findings.append(_concurrent_probe(client, cfg, blocked_at, wrong_pw))
+    findings.append(_concurrent_probe(ctx, cfg, blocked_at, wrong_pw))
     return [f for f in findings if f is not None]
 
 
-def _concurrent_probe(client: HttpClient, cfg: ScanConfig, limit: int, wrong_pw: str):
+def _concurrent_probe(ctx: CheckContext, cfg: ScanConfig, limit: int, wrong_pw: str):
     # Fire more than the observed limit at once, on a fresh account. A race-free
     # limiter blocks the excess; a racy one lets them all through.
-    n = min(limit + 3, client.remaining, 12)
+    n = min(limit + 3, ctx.remaining, 12)
     if n <= limit:
         return Finding(
             check=CHECK, status=Status.SKIPPED, severity=Severity.INFO,
@@ -73,7 +74,7 @@ def _concurrent_probe(client: HttpClient, cfg: ScanConfig, limit: int, wrong_pw:
             detail="Not enough request budget for a meaningful burst.")
     fresh = random_username("burst")
     try:
-        responses = client.burst(cfg.method, cfg.url, build_data(cfg, fresh, wrong_pw),
+        responses = ctx.burst(cfg.method, cfg.url, build_data(cfg, fresh, wrong_pw),
                                  n, cfg.content_type)
     except RequestBudgetExceeded:
         return None

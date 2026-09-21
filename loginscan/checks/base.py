@@ -4,7 +4,8 @@ from __future__ import annotations
 import re
 import secrets
 
-from ..http import HttpClient, Response
+from ..context import CheckContext
+from ..http import Response
 from ..models import ScanConfig
 
 SQL_ERROR_SIGNS = [
@@ -42,25 +43,24 @@ def _input_value(html: str, field: str) -> str | None:
     return None
 
 
-def _fresh_csrf(client: HttpClient, cfg: ScanConfig) -> str | None:
+def _fresh_csrf(ctx: CheckContext, cfg: ScanConfig) -> str | None:
     # Fetch the login page so the cookie jar gets a matching CSRF cookie, then
     # read the token from the hidden field. Done per POST to stay valid even for
     # per-request tokens.
     if not cfg.csrf_field:
         return None
-    resp = client.get(cfg.csrf_url or cfg.login_page_url or cfg.url)
+    resp = ctx.get(cfg.csrf_url or cfg.login_page_url or cfg.url)
     token = _input_value(resp.body, cfg.csrf_field)
-    client.csrf_token = token
     return token
 
 
-def submit_login(client: HttpClient, cfg: ScanConfig, username: str, password: str) -> Response:
+def submit_login(ctx: CheckContext, cfg: ScanConfig, username: str, password: str) -> Response:
     data = build_data(cfg, username, password)
     if cfg.csrf_field:
-        token = _fresh_csrf(client, cfg)
+        token = _fresh_csrf(ctx, cfg)
         if token is not None:
             data[cfg.csrf_field] = token
-    return client.request(cfg.method, cfg.url, data=data, content_type=cfg.content_type)
+    return ctx.request(cfg.method, cfg.url, data=data, content_type=cfg.content_type)
 
 
 def cookie_names(resp: Response) -> list[str]:
@@ -71,8 +71,8 @@ def session_cookies(resp: Response) -> list[str]:
     return [n for n in cookie_names(resp) if SESSION_COOKIE_HINT.search(n)]
 
 
-def baseline_fail(client: HttpClient, cfg: ScanConfig) -> Response:
-    return submit_login(client, cfg, random_username(), "wrong_" + secrets.token_hex(3))
+def baseline_fail(ctx: CheckContext, cfg: ScanConfig) -> Response:
+    return submit_login(ctx, cfg, random_username(), "wrong_" + secrets.token_hex(3))
 
 
 def has_sql_error(body: str) -> str | None:

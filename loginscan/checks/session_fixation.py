@@ -6,39 +6,39 @@ Runs only when a test username + password are supplied; uses the cookie jar.
 """
 from __future__ import annotations
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail, looks_like_success, submit_login
 
 CHECK = "session_fixation"
 
 
-def _snapshot(client: HttpClient) -> dict[str, str]:
+def _snapshot(ctx: CheckContext) -> dict[str, str]:
     snap: dict[str, str] = {}
-    for name, value in client.observed_session_tokens:
+    for name, value in ctx.session_tokens():
         snap[name] = value
     return snap
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
     if not (cfg.known_username and cfg.password):
         return [Finding(
             check=CHECK, status=Status.SKIPPED, severity=Severity.INFO,
             title="Session fixation test skipped",
             detail="Provide a test account (known_username + password) to run stateful checks.")]
 
-    base = baseline_fail(client, cfg)  # reference for confirming a real login
-    client.get(cfg.login_page_url or cfg.url)  # obtain any pre-auth session cookie
-    pre = _snapshot(client)
+    base = baseline_fail(ctx, cfg)  # reference for confirming a real login
+    ctx.get(cfg.login_page_url or cfg.url)  # obtain any pre-auth session cookie
+    pre = _snapshot(ctx)
 
-    resp = submit_login(client, cfg, cfg.known_username, cfg.password)
+    resp = submit_login(ctx, cfg, cfg.known_username, cfg.password)
     if not looks_like_success(resp, base, cfg):
         return [Finding(
             check=CHECK, status=Status.SKIPPED, severity=Severity.INFO,
             title="Could not confirm login with the test account",
             detail="The provided credentials did not produce a success-like response; check them.")]
 
-    post = _snapshot(client)
+    post = _snapshot(ctx)
     for name, pre_val in pre.items():
         if post.get(name) == pre_val:
             return [Finding(

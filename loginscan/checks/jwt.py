@@ -10,7 +10,7 @@ import base64
 import json
 import re
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail
 
@@ -27,11 +27,11 @@ def _b64url_json(segment: str) -> dict | None:
         return None
 
 
-def _find_jwt(client: HttpClient, cfg: ScanConfig) -> str | None:
-    for _, value in client.observed_session_tokens:
+def _find_jwt(ctx: CheckContext, cfg: ScanConfig) -> str | None:
+    for _, value in ctx.session_tokens():
         if _JWT_RE.fullmatch(value):
             return value
-    resp = baseline_fail(client, cfg)
+    resp = baseline_fail(ctx, cfg)
     for cookie in resp.set_cookies:
         m = _JWT_RE.search(cookie)
         if m:
@@ -40,8 +40,8 @@ def _find_jwt(client: HttpClient, cfg: ScanConfig) -> str | None:
     return m.group(0) if m else None
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
-    token = _find_jwt(client, cfg)
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
+    token = _find_jwt(ctx, cfg)
     if not token:
         return [Finding(
             check=CHECK, status=Status.SKIPPED, severity=Severity.INFO,

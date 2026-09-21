@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "headers"
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
     findings: list[Finding] = []
     parsed = urlparse(cfg.url)
     is_https = parsed.scheme == "https"
@@ -25,7 +25,7 @@ def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
 
     probe_url = cfg.login_page_url or cfg.url
     try:
-        resp = client.get(probe_url)
+        resp = ctx.get(probe_url)
     except Exception as e:  # noqa: BLE001
         findings.append(Finding(
             check=CHECK, status=Status.SKIPPED, severity=Severity.INFO,

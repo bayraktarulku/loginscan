@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
-from ..http import HttpClient
+from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 from .base import looks_like_success, random_username
 
@@ -22,11 +22,11 @@ def _url_with(cfg: ScanConfig, username: str, password: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, q, ""))
 
 
-def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
+def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:
     findings: list[Finding] = []
 
-    base = client.get(_url_with(cfg, random_username(), "x"))
-    probe = client.get(_url_with(cfg, BYPASS_PAYLOAD, "x"))
+    base = ctx.get(_url_with(cfg, random_username(), "x"))
+    probe = ctx.get(_url_with(cfg, BYPASS_PAYLOAD, "x"))
     why = looks_like_success(probe, base, cfg)
     if why:
         findings.append(Finding(
@@ -38,7 +38,7 @@ def run(client: HttpClient, cfg: ScanConfig) -> list[Finding]:
         ))
 
     try:
-        trace = client.request("TRACE", cfg.url)
+        trace = ctx.request("TRACE", cfg.url)
         if trace.status == 200:
             findings.append(Finding(
                 check=CHECK, status=Status.WARNING, severity=Severity.LOW,
