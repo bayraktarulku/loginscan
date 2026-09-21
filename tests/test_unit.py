@@ -107,6 +107,26 @@ def test_success_detection_json_token():
     assert looks_like_success(baseline, baseline, cfg) is None
 
 
+def test_scope_guard_blocks_other_host():
+    import pytest as _pytest
+
+    from loginscan.http import HttpClient, ScopeError
+    client = HttpClient(10, 0.0, 5, True, allowed_hosts={"good.example"})
+    with _pytest.raises(ScopeError):
+        client.request("GET", "http://evil.example/x")
+
+
+def test_junit_export():
+    from loginscan.junit import report_to_junit
+    rep = Report("http://x/login")
+    rep.add(Finding("sqli", Status.VULNERABLE, Severity.CRITICAL, "SQLi", "d & <bad>"))
+    rep.add(Finding("headers", Status.OK, Severity.INFO, "ok", "d"))
+    xml = report_to_junit(rep)
+    assert '<testsuite name="loginscan"' in xml
+    assert 'failures="1"' in xml
+    assert "&lt;bad&gt;" in xml  # escaped
+
+
 def test_authorization_gate():
     with pytest.raises(NotAuthorized):
         ensure_authorized(False)

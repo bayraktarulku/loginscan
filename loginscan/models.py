@@ -68,3 +68,7 @@ class ScanConfig:
     timeout: float = 10.0
     verify_tls: bool = True
     extra_fields: dict[str, str] = field(default_factory=dict)
+    extra_headers: dict[str, str] = field(default_factory=dict)
+    proxy: str | None = None
+    retries: int = 2
+    scope_guard: bool = True

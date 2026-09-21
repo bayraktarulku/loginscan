@@ -88,9 +88,13 @@ Useful options:
 | `--field csrf=abc` | Constant field added to every request. |
 | `--csrf-field NAME` | Hidden CSRF field name; enables cookie jar + auto token fetch. |
 | `--max-requests 25` | Total request budget. |
+| `--header "K: V"` / `--bearer TOKEN` | Custom headers / bearer auth for protected APIs. |
+| `--proxy URL` | Route requests through an HTTP(S) proxy. |
+| `-v` / `-vv` / `--quiet` | Log verbosity (per-request debug at `-vv`). |
 | `--json report.json` | Also write the report as JSON. |
 | `--html report.html` | Also write a shareable, styled HTML report. |
 | `--sarif report.sarif` | Also write SARIF 2.1.0 for GitHub code scanning / CI. |
+| `--junit report.xml` | Also write JUnit XML for CI test reporters. |
 | `--insecure` | Disable TLS verification (for your own test server). |
 
 Exit code: `1` if any vulnerability is found, `0` if clean, `2` if unauthorized/misused (handy for CI).

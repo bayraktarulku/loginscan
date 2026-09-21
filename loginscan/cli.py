@@ -55,6 +55,17 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--delay", type=float, default=None, help="Delay between requests (s, default 0.3).")
     p.add_argument("--timeout", type=float, default=None, help="Request timeout (s, default 10).")
     p.add_argument("--insecure", action="store_true", help="Disable TLS certificate verification.")
+    p.add_argument("--header", dest="headers", action="append", default=[], metavar="K: V",
+                   help="Custom request header (repeatable).")
+    p.add_argument("--bearer", default=None, metavar="TOKEN",
+                   help="Send Authorization: Bearer TOKEN on every request.")
+    p.add_argument("--proxy", default=None, metavar="URL", help="HTTP(S) proxy URL.")
+    p.add_argument("--retries", type=int, default=None, help="Transient-failure retries (default 2).")
+    p.add_argument("--no-scope-guard", action="store_true",
+                   help="Allow requests to hosts other than the target (off by default).")
+    p.add_argument("-v", "--verbose", action="count", default=0,
+                   help="Increase log verbosity (-v info, -vv debug).")
+    p.add_argument("--quiet", action="store_true", help="Only log errors.")
     p.add_argument("--config", default=None, metavar="FILE",
                    help="Load a scan profile (JSON, or YAML with pyyaml). CLI flags override it.")
     p.add_argument("--baseline", default=None, metavar="FILE",
@@ -71,6 +82,8 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Also write the report as a shareable HTML page.")
     p.add_argument("--sarif", dest="sarif_path", default=None, metavar="FILE",
                    help="Also write SARIF 2.1.0 (for GitHub code scanning / CI).")
+    p.add_argument("--junit", dest="junit_path", default=None, metavar="FILE",
+                   help="Also write JUnit XML (for CI test reporters).")
     p.add_argument("--version", action="version", version=f"loginscan {__version__}")
     return p
 
@@ -130,7 +143,27 @@ def _build_config(args, conf) -> ScanConfig:
     cfg.delay = pick(args.delay, "delay", 0.3)
     cfg.timeout = timeout
     cfg.verify_tls = not insecure
+
+    headers = dict(conf.get("headers", {}))
+    headers.update(_parse_headers(args.headers))
+    bearer = args.bearer or conf.get("bearer")
+    if bearer:
+        headers["Authorization"] = f"Bearer {bearer}"
+    cfg.extra_headers = headers
+    cfg.proxy = args.proxy or conf.get("proxy")
+    cfg.retries = pick(args.retries, "retries", 2)
+    cfg.scope_guard = not (args.no_scope_guard or conf.get("no_scope_guard", False))
     return cfg
+
+
+def _parse_headers(pairs: list[str]) -> dict:
+    out = {}
+    for item in pairs:
+        if ":" not in item:
+            raise SystemExit(f"--header '{item}' invalid; expected 'Key: Value'.")
+        k, v = item.split(":", 1)
+        out[k.strip()] = v.strip()
+    return out
 
 
 def _split(value):
@@ -139,6 +172,9 @@ def _split(value):
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+
+    from .logconf import configure_logging
+    configure_logging(verbosity=args.verbose, quiet=args.quiet)
 
     if args.list_checks:
         from .registry import check_names
@@ -197,6 +233,11 @@ def main(argv: list[str] | None = None) -> int:
         with open(args.sarif_path, "w", encoding="utf-8") as fh:
             fh.write(report_to_sarif_json(report, __version__))
         print(f"SARIF report written: {args.sarif_path}")
+    if args.junit_path:
+        from .junit import report_to_junit
+        with open(args.junit_path, "w", encoding="utf-8") as fh:
+            fh.write(report_to_junit(report))
+        print(f"JUnit report written: {args.junit_path}")
 
     if args.write_baseline:
         from .baseline import write_baseline

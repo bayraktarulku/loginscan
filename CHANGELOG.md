@@ -8,6 +8,9 @@ All notable changes to loginscan are documented here. The format follows
 ### Added
 - Ruff + mypy configuration; the codebase is lint- and type-clean.
 - Pre-commit hooks (ruff, mypy) and a CI lint/type-check job with coverage.
+- Docs site (mkdocs-material), CONTRIBUTING / SECURITY / CODE_OF_CONDUCT, issue & PR templates.
+- Observability & robustness: structured logging (`-v/-vv/--quiet`), transient-failure
+  retries with backoff, `--header`/`--bearer`, `--proxy`, host scope-guard, and JUnit XML output.
 
 ## [1.1.0] - 2026-09-21
 ### Added
