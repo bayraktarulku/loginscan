@@ -11,6 +11,7 @@ from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail, looks_like_success, submit_login
 
 CHECK = "session_fixation"
+ORDER = 110
 
 
 def _snapshot(ctx: CheckContext) -> dict[str, str]:

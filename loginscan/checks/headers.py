@@ -7,6 +7,7 @@ from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "headers"
+ORDER = 10
 
 
 def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:

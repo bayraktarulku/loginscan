@@ -6,6 +6,7 @@ from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail, has_sql_error, looks_like_success, submit_login
 
 CHECK = "sqli"
+ORDER = 80
 
 AUTH_BYPASS_PAYLOADS = ["admin'--", "admin'#", "' OR '1'='1'--", "' OR 1=1--"]
 ERROR_PROBE = "'"

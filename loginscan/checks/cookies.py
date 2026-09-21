@@ -8,6 +8,7 @@ from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail
 
 CHECK = "cookies"
+ORDER = 90
 
 
 def _parse_flags(raw: str) -> dict:

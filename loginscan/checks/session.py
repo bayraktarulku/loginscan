@@ -8,6 +8,7 @@ from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "session"
+ORDER = 100
 
 MIN_TOKEN_LEN = 16
 

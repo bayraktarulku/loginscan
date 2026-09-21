@@ -12,6 +12,7 @@ from ..models import Finding, ScanConfig, Severity, Status
 from .base import looks_like_success, random_username
 
 CHECK = "verb"
+ORDER = 50
 
 BYPASS_PAYLOAD = "admin'--"
 

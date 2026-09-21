@@ -15,9 +15,8 @@ from . import (
     verb,
 )
 
-# enumeration runs before sqli so sqli's many failed logins don't trip the
-# target's rate limiter and pollute the enumeration measurement. ratelimit is
-# last because it is the most request-heavy.
+# The set of built-in checks. Run order is decided by each check's ORDER
+# constant (see registry.all_checks), not by the position in this list.
 ALL_CHECKS = [headers, csrf, cors, cache, verb, open_redirect, enumeration,
               sqli, cookies, session, session_fixation, jwt, ratelimit]
 

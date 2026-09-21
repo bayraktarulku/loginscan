@@ -15,6 +15,7 @@ from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail
 
 CHECK = "jwt"
+ORDER = 120
 
 _JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
 

@@ -11,6 +11,7 @@ from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "csrf"
+ORDER = 20
 
 _TOKEN_INPUT = re.compile(
     r'<input[^>]*name=["\']?[^"\'>\s]*(?:csrf|xsrf|authenticity|_token)[^"\'>\s]*', re.I)

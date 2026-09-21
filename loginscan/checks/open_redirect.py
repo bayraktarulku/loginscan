@@ -11,6 +11,7 @@ from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "open_redirect"
+ORDER = 60
 
 REDIRECT_PARAMS = ["next", "redirect", "redirect_uri", "returnUrl", "return_to",
                    "url", "dest", "continue"]

@@ -5,6 +5,7 @@ from ..context import CheckContext
 from ..models import Finding, ScanConfig, Severity, Status
 
 CHECK = "cors"
+ORDER = 30
 
 EVIL_ORIGIN = "https://loginscan-evil.example"
 

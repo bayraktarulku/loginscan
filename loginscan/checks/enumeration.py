@@ -6,6 +6,7 @@ from ..models import Finding, ScanConfig, Severity, Status
 from .base import random_username, submit_login
 
 CHECK = "enumeration"
+ORDER = 70
 
 LEN_DIFF_RATIO = 0.15
 TIME_DIFF_SECONDS = 0.5

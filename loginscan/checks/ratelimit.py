@@ -12,6 +12,7 @@ from ..models import Finding, ScanConfig, Severity, Status
 from .base import build_data, random_username, submit_login
 
 CHECK = "ratelimit"
+ORDER = 200
 
 BLOCK_STATUSES = {429, 403, 503}
 BLOCK_HINTS = ["too many", "rate limit", "try again later", "captcha", "locked", "blocked"]

@@ -6,6 +6,7 @@ from ..models import Finding, ScanConfig, Severity, Status
 from .base import baseline_fail
 
 CHECK = "cache"
+ORDER = 40
 
 
 def run(ctx: CheckContext, cfg: ScanConfig) -> list[Finding]:

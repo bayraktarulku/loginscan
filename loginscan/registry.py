@@ -49,13 +49,19 @@ def plugin_checks() -> list[Any]:
 
 
 def all_checks() -> list[Any]:
+    """Built-in + plugin checks, ordered by each check's declared ORDER.
+
+    ORDER (default 100) expresses run-order constraints as data, e.g. enumeration
+    (70) runs before sqli (80) so sqli's failed logins don't trip the rate limiter,
+    and ratelimit (200) runs last. Plugins slot in by their own ORDER.
+    """
     checks: list[Any] = list(ALL_CHECKS)
     seen = {getattr(c, "CHECK", None) for c in checks}
     for c in plugin_checks():
         if getattr(c, "CHECK", None) not in seen:
             checks.append(c)
             seen.add(c.CHECK)
-    return checks
+    return sorted(checks, key=lambda c: getattr(c, "ORDER", 100))
 
 
 def select(checks: list[Any], only: list[str] | None = None,
