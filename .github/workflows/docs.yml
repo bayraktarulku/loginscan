@@ -19,6 +19,9 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true  # turn on Pages automatically on first run
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
