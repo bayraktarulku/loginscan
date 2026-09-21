@@ -10,6 +10,8 @@ from html.parser import HTMLParser
 from typing import List, Optional
 from urllib.parse import urljoin, urlparse
 
+from dataclasses import dataclass
+
 from .http import HttpClient
 from .models import ScanConfig
 
@@ -170,14 +172,32 @@ def _match_fields(names):
     return user, pw
 
 
-def from_swagger(location: str, client: HttpClient, **overrides) -> ScanConfig:
-    """Parse an OpenAPI/Swagger JSON spec and build a ScanConfig for its login endpoint."""
-    spec = _load_spec(location)
-    base = _base_url(spec, location)
-    paths = spec.get("paths", {})
+_KIND_HINTS = [
+    ("logout", re.compile(r"log[\-_]?out|sign[\-_]?out", re.I)),
+    ("register", re.compile(r"regist|sign[\-_]?up|create[\-_]?account", re.I)),
+    ("reset", re.compile(r"reset|forgot|recover|change[\-_]?password", re.I)),
+    ("refresh", re.compile(r"refresh", re.I)),
+    ("login", re.compile(r"log[\-_]?in|sign[\-_]?in|authenticate|token|session|oauth", re.I)),
+]
 
-    best = None  # (score, path, method, fields)
-    for path, item in paths.items():
+
+@dataclass
+class Endpoint:
+    kind: str
+    config: ScanConfig
+
+
+def _classify(path: str, op: dict) -> str:
+    text = " ".join([path, op.get("operationId", "") or "", op.get("summary", "") or ""])
+    for kind, rx in _KIND_HINTS:
+        if rx.search(text):
+            return kind
+    return "auth"
+
+
+def _credential_endpoints(spec: dict, base: str):
+    """Yield (score, path, method, op, fields) for every credential-taking operation."""
+    for path, item in spec.get("paths", {}).items():
         if not isinstance(item, dict):
             continue
         for method, op in item.items():
@@ -186,23 +206,38 @@ def from_swagger(location: str, client: HttpClient, **overrides) -> ScanConfig:
             fields = _fields_from_operation(spec, op)
             if not fields:
                 continue
-            score = _score_path(path, op) + 1  # having user+pass fields is itself a signal
-            if best is None or score > best[0]:
-                best = (score, path, method, fields)
+            yield _score_path(path, op) + 1, path, method, op, fields
 
+
+def from_swagger(location: str, client: HttpClient, **overrides) -> ScanConfig:
+    """Parse an OpenAPI/Swagger JSON spec and build a ScanConfig for its login endpoint."""
+    spec = _load_spec(location)
+    base = _base_url(spec, location)
+    best = None
+    for score, path, method, _op, fields in _credential_endpoints(spec, base):
+        if best is None or score > best[0]:
+            best = (score, path, method, fields)
     if best is None:
         raise DiscoveryError("No login-like endpoint with username/password fields found in the spec.")
-
     _, path, method, (ctype, user, pw) = best
-    cfg = ScanConfig(
-        url=base + path,
-        method=method.upper(),
-        content_type=ctype,
-        username_field=user or "username",
-        password_field=pw,
-    )
+    cfg = ScanConfig(url=base + path, method=method.upper(), content_type=ctype,
+                     username_field=user or "username", password_field=pw)
     _apply_overrides(cfg, overrides)
     return cfg
+
+
+def discover_endpoints(location: str, client: HttpClient) -> List[Endpoint]:
+    """Return every credential-taking auth endpoint in an OpenAPI/Swagger spec."""
+    spec = _load_spec(location)
+    base = _base_url(spec, location)
+    endpoints = []
+    for _score, path, method, op, (ctype, user, pw) in _credential_endpoints(spec, base):
+        cfg = ScanConfig(url=base + path, method=method.upper(), content_type=ctype,
+                         username_field=user or "username", password_field=pw)
+        endpoints.append(Endpoint(kind=_classify(path, op), config=cfg))
+    if not endpoints:
+        raise DiscoveryError("No auth endpoints with credential fields found in the spec.")
+    return endpoints
 
 
 def _apply_overrides(cfg: ScanConfig, overrides: dict) -> None:

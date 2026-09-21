@@ -51,6 +51,33 @@ def test_csrf_protected_scan_via_discovery(secure_url):
     assert csrf.status == Status.OK
 
 
+def test_app_scan_multiple_endpoints(vuln_url, tmp_path):
+    import json
+
+    from loginscan.app import scan_app
+    from loginscan.discovery import discover_endpoints
+
+    schema = {"type": "object", "properties": {"username": {"type": "string"},
+                                               "password": {"type": "string"}}}
+    body = {"content": {"application/x-www-form-urlencoded": {"schema": schema}}}
+    base = vuln_url.rstrip("/")
+    spec = {"openapi": "3.0.0", "servers": [{"url": base}], "paths": {
+        "/login": {"post": {"operationId": "login", "requestBody": body}},
+        "/register": {"post": {"operationId": "signup", "requestBody": body}},
+    }}
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(spec))
+    endpoints = discover_endpoints(str(p), HttpClient(5, 0.0, 10, True))
+    assert {"login", "register"} <= {e.kind for e in endpoints}
+    for e in endpoints:
+        e.config.success_indicators = ["Giriş başarılı"]
+        e.config.delay = 0.0
+        e.config.max_requests = 60
+    app = scan_app(endpoints, authorized=True, only=["sqli"])
+    assert len(app.sections) == 2
+    assert app.all_vulnerabilities  # SQLi found on each endpoint
+
+
 def test_secure_server_has_csrf_defense(secure_url):
     report = _scan(secure_url, known_username="admin")
     csrf = [f for f in report.findings if f.check == "csrf"]

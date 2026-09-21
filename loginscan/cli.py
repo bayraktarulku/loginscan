@@ -24,6 +24,8 @@ def _build_parser() -> argparse.ArgumentParser:
     src.add_argument("url", nargs="?", help="Login endpoint URL (e.g. https://site/login)")
     src.add_argument("--site", help="Web page URL; the login form is auto-discovered")
     src.add_argument("--swagger", help="OpenAPI/Swagger JSON URL or file; login endpoint is auto-discovered")
+    src.add_argument("--all-endpoints", action="store_true",
+                     help="With --swagger: scan EVERY auth endpoint (login/register/reset/...).")
 
     p.add_argument("--i-own-this", action="store_true",
                    help="Assert you are authorized to test the target (required).")
@@ -169,6 +171,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     only = _split(args.only) or conf.get("only")
     skip = _split(args.skip) or conf.get("skip")
 
+    if args.all_endpoints or conf.get("all_endpoints"):
+        return _run_app(args, conf, cfg, only, skip)
+
     csrf_note = f", csrf={cfg.csrf_field}" if cfg.csrf_field else ""
     print(f"Target: {cfg.method} {cfg.url}  (fields: {cfg.username_field}/{cfg.password_field}, "
           f"{cfg.content_type}{csrf_note})\n")
@@ -201,6 +206,57 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     return _exit_code(args, conf, report)
+
+
+def _run_app(args, conf, cfg, only, skip) -> int:
+    swagger = args.swagger or conf.get("swagger")
+    if not swagger:
+        print("--all-endpoints requires --swagger.", file=sys.stderr)
+        return 2
+    import json as _json
+
+    from .app import scan_app
+    from .discovery import discover_endpoints
+    from .models import Status
+
+    disco = HttpClient(max_requests=20, delay=0.0, timeout=cfg.timeout, verify_tls=cfg.verify_tls)
+    try:
+        endpoints = discover_endpoints(swagger, disco)
+    except DiscoveryError as e:
+        print(f"Discovery failed: {e}", file=sys.stderr)
+        return 2
+
+    for ep in endpoints:  # apply common tuning to every endpoint
+        c = ep.config
+        c.known_username = cfg.known_username
+        c.success_indicators = cfg.success_indicators
+        c.extra_fields = dict(cfg.extra_fields)
+        c.delay, c.timeout = cfg.delay, cfg.timeout
+        c.max_requests, c.verify_tls = cfg.max_requests, cfg.verify_tls
+
+    print(f"App scan: {len(endpoints)} auth endpoints discovered\n")
+    try:
+        app = scan_app(endpoints, authorized=args.i_own_this, only=only, skip=skip)
+    except NotAuthorized as e:
+        print(str(e), file=sys.stderr)
+        return 2
+
+    print(app.to_text())
+    if args.json_path:
+        with open(args.json_path, "w", encoding="utf-8") as fh:
+            fh.write(_json.dumps(app.to_dict(), ensure_ascii=False, indent=2))
+        print(f"JSON report written: {args.json_path}")
+
+    min_score = args.min_score if args.min_score is not None else conf.get("min_score")
+    if min_score is not None and app.worst_score()["score"] < min_score:
+        return 1
+    fail_on = args.fail_on or conf.get("fail_on", "vulnerable")
+    if fail_on == "never":
+        return 0
+    offenders = app.all_vulnerabilities
+    if fail_on == "warning":
+        offenders = offenders + [f for s in app.sections for f in s["report"].warnings]
+    return 1 if offenders else 0
 
 
 def _exit_code(args, conf, report) -> int:

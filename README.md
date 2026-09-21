@@ -46,6 +46,18 @@ Scan by **Swagger/OpenAPI link** (JSON spec; endpoint + fields auto-discovered):
 loginscan --swagger https://api.site/openapi.json --i-own-this --user alice
 ```
 
+### Whole-app scan (all auth endpoints)
+
+With an OpenAPI/Swagger spec, scan **every** auth endpoint (login, register, password reset,
+token refresh, …) in one run and get an aggregated report + worst-case score:
+
+```bash
+loginscan --swagger https://api.site/openapi.json --all-endpoints --i-own-this --user alice
+# App scan: 4 auth endpoints discovered
+# >>> [login] .../login
+# >>> [register] .../register  ...
+```
+
 ### Real login forms (CSRF + cookies)
 
 Many real forms set a CSRF cookie and require a matching hidden token. With `--site`,

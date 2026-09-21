@@ -8,7 +8,7 @@ from .models import Finding, ScanConfig, Severity, Status
 from .report import Report
 from .scanner import Scanner
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 __all__ = [
     "Scanner", "ScanConfig", "Report", "Finding",

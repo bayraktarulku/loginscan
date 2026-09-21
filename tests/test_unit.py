@@ -159,6 +159,22 @@ def test_from_site_without_password_raises():
         from_site("http://site/page", FakeClient("<form></form>"))
 
 
+def test_discover_endpoints_classifies(tmp_path):
+    from loginscan.discovery import discover_endpoints
+    schema = {"type": "object", "properties": {"username": {"type": "string"},
+                                               "password": {"type": "string"}}}
+    body = {"content": {"application/json": {"schema": schema}}}
+    spec = {"openapi": "3.0.0", "servers": [{"url": "http://api.example"}], "paths": {
+        "/login": {"post": {"operationId": "login", "requestBody": body}},
+        "/register": {"post": {"operationId": "signup", "requestBody": body}},
+        "/password-reset": {"post": {"operationId": "reset", "requestBody": body}},
+    }}
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(spec))
+    eps = discover_endpoints(str(p), FakeClient())
+    assert {"login", "register", "reset"} <= {e.kind for e in eps}
+
+
 def _b64url(obj):
     raw = json.dumps(obj).encode()
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
