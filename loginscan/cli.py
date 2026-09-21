@@ -44,6 +44,12 @@ def _build_parser() -> argparse.ArgumentParser:
                    metavar="TEXT", help="Text meaning 'login succeeded' (repeatable).")
     p.add_argument("--field", dest="extra_fields", action="append", default=[],
                    metavar="NAME=VALUE", help="Constant field added to every request (repeatable).")
+    p.add_argument("--only", default=None, metavar="a,b,c",
+                   help="Run only these checks (comma-separated).")
+    p.add_argument("--skip", default=None, metavar="x,y",
+                   help="Skip these checks (comma-separated).")
+    p.add_argument("--list-checks", action="store_true",
+                   help="List all available checks (built-in + plugins) and exit.")
     p.add_argument("--max-requests", type=int, default=60, help="Total request budget (default 60).")
     p.add_argument("--delay", type=float, default=0.3, help="Delay between requests (s).")
     p.add_argument("--timeout", type=float, default=10.0, help="Request timeout (s).")
@@ -102,8 +108,20 @@ def _build_config(args) -> ScanConfig:
     return cfg
 
 
+def _split(value):
+    return [x.strip() for x in value.split(",") if x.strip()] if value else None
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     args = _build_parser().parse_args(argv)
+
+    if args.list_checks:
+        from .registry import check_names
+        print("Available checks:")
+        for name in check_names():
+            print(f"  - {name}")
+        return 0
+
     if not (args.url or args.site or args.swagger):
         print("Give a target: a URL, --site URL, or --swagger URL/file.", file=sys.stderr)
         return 2
@@ -119,7 +137,8 @@ def main(argv: Optional[List[str]] = None) -> int:
           f"{cfg.content_type}{csrf_note})\n")
 
     try:
-        report = Scanner(cfg, authorized=args.i_own_this).run()
+        report = Scanner(cfg, authorized=args.i_own_this,
+                         only=_split(args.only), skip=_split(args.skip)).run()
     except NotAuthorized as e:
         print(str(e), file=sys.stderr)
         return 2

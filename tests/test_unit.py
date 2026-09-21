@@ -24,6 +24,27 @@ class FakeClient:
         return Response(200, {}, self.cookies, self.body, 0.0, url)
 
 
+def test_registry_select_and_function_check():
+    from loginscan.checks import headers, sqli
+    from loginscan.registry import _FunctionCheck, check_names, select
+
+    fc = _FunctionCheck("custom", lambda client, cfg: [])
+    assert fc.CHECK == "custom" and fc.run(None, None) == []
+
+    names = check_names()
+    assert "sqli" in names and "csrf" in names
+
+    assert [c.CHECK for c in select([sqli, headers], only=["sqli"])] == ["sqli"]
+    assert [c.CHECK for c in select([sqli, headers], skip=["sqli"])] == ["headers"]
+
+
+def test_plugin_checks_merged(monkeypatch):
+    from loginscan import registry
+    plugin = registry._FunctionCheck("myplugin", lambda client, cfg: [])
+    monkeypatch.setattr(registry, "plugin_checks", lambda: [plugin])
+    assert "myplugin" in registry.check_names(registry.all_checks())
+
+
 def test_input_value_extraction():
     from loginscan.checks.base import _input_value
     html = '<input type="hidden" name="csrf" value="abc123"><input name="username">'

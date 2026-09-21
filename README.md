@@ -121,6 +121,32 @@ loginscan --site http://127.0.0.1:8002/ --i-own-this --user admin --success "Gir
 #   -> sqli / enumeration / rate-limit all OK
 ```
 
+## Writing a plugin check
+
+loginscan discovers extra checks from the `loginscan.checks` entry-point group. A check is
+any object with a `CHECK` name and `run(client, cfg) -> list[Finding]` (a plain function
+works too — its entry-point name becomes the check name):
+
+```python
+# mypkg/mycheck.py
+from loginscan.models import Finding, Severity, Status
+CHECK = "mycheck"
+def run(client, cfg):
+    resp = client.get(cfg.url)
+    if "X-Powered-By" in resp.headers:
+        return [Finding(CHECK, Status.WARNING, Severity.LOW, "Tech disclosed", "…")]
+    return [Finding(CHECK, Status.OK, Severity.INFO, "OK", "")]
+```
+
+```toml
+# mypkg/pyproject.toml
+[project.entry-points."loginscan.checks"]
+mycheck = "mypkg.mycheck"
+```
+
+After `pip install mypkg`, `loginscan --list-checks` shows it and scans run it automatically.
+Use `--only a,b` / `--skip x,y` to control which checks run.
+
 ## Security score
 
 Every report includes a **0–100 score and a letter grade** (A–F) derived from the

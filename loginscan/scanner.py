@@ -4,18 +4,20 @@ from __future__ import annotations
 from typing import List, Optional
 
 from .authorization import ensure_authorized
-from .checks import ALL_CHECKS
 from .http import HttpClient, RequestBudgetExceeded
 from .models import Finding, ScanConfig, Severity, Status
+from .registry import all_checks, select
 from .report import Report
 
 
 class Scanner:
     def __init__(self, config: ScanConfig, authorized: bool = False,
-                 checks: Optional[list] = None):
+                 checks: Optional[list] = None,
+                 only: Optional[list] = None, skip: Optional[list] = None):
         self.config = config
         self.authorized = authorized
-        self.checks = checks if checks is not None else ALL_CHECKS
+        base = checks if checks is not None else all_checks()
+        self.checks = select(base, only=only, skip=skip)
 
     def run(self) -> Report:
         ensure_authorized(self.authorized)
