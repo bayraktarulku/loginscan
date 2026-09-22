@@ -5,6 +5,8 @@ All notable changes to loginscan are documented here. The format follows
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+## [1.3.0] - 2026-09-22
 ### Added
 - Attacker-perspective detection checks (all low-volume, non-destructive):
   - `ratelimit_bypass` — spoofed `X-Forwarded-For`/`X-Real-IP` resets a header-trusting limiter.
